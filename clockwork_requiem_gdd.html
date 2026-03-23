@@ -1,0 +1,1837 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CLOCKWORK REQUIEM — Game Design Document</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0d0c0b;
+    --bg2:      #121110;
+    --bg3:      #171512;
+    --surface:  #1a1815;
+    --surface2: #211f1b;
+    --border:   #2a2620;
+    --border2:  #3d3830;
+
+    /* Aksan renkleri */
+    --copper:   #b87333;
+    --copper2:  #d4893a;
+    --copper3:  #f0a84a;
+    --rust:     #8b3a2a;
+    --rust2:    #c0432e;
+
+    /* Güç kaynağı renkleri */
+    --steam:    #c0732a;   /* buhar — turuncu/amber */
+    --steam2:   #e8913a;
+    --elec:     #1a7a9e;   /* elektrik — soğuk mavi */
+    --elec2:    #2aa8d4;
+    --soul:     #6b2fa0;   /* ruh — mor */
+    --soul2:    #9b52d4;
+
+    --text:     #e0d4bc;
+    --text2:    #b8a888;
+    --text3:    #7a6e5a;
+    --text4:    #4a4236;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', 'Segoe UI', sans-serif;
+    font-size: 16px;
+    line-height: 1.8;
+    min-height: 100vh;
+  }
+
+  /* Gear texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(circle at 15% 85%, rgba(184,115,51,.04) 0%, transparent 50%),
+      radial-gradient(circle at 85% 15%, rgba(26,122,158,.03) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── SIDE NAV ── */
+  #sidenav {
+    position: fixed;
+    left: 0; top: 0; bottom: 0;
+    width: 236px;
+    background: var(--bg2);
+    border-right: 1px solid var(--border2);
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    overflow-y: auto;
+  }
+
+  .nav-logo {
+    padding: 22px 20px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-logo-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--copper3);
+    letter-spacing: 3px;
+    line-height: 1.3;
+  }
+
+  .nav-logo-sub {
+    font-size: 9px;
+    color: var(--text3);
+    letter-spacing: 2px;
+    margin-top: 3px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  #sidenav a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px 8px 20px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    color: var(--text3);
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    transition: all .18s;
+    text-transform: uppercase;
+  }
+
+  #sidenav a:hover, #sidenav a.active {
+    color: var(--copper3);
+    border-left-color: var(--copper);
+    background: rgba(184,115,51,.07);
+    padding-left: 24px;
+  }
+
+  .nav-num {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--text4);
+    min-width: 18px;
+  }
+
+  .nav-group {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--border2);
+    letter-spacing: 3px;
+    padding: 14px 20px 4px;
+    text-transform: uppercase;
+  }
+
+  /* ── TOP BAR ── */
+  #topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    margin-left: 236px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border2);
+    padding: 9px 56px;
+    display: flex;
+    gap: 28px;
+    align-items: center;
+  }
+
+  .tb-item {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: 1.5px;
+  }
+
+  .tb-item span { color: var(--copper2); }
+
+  /* ── MAIN ── */
+  main {
+    margin-left: 236px;
+    padding: 0 56px 120px;
+    max-width: 1020px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    padding: 72px 0 56px;
+    text-align: center;
+    position: relative;
+  }
+
+  .hero::after {
+    content: '';
+    display: block;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--copper), transparent);
+    margin-top: 48px;
+  }
+
+  .hero-eyebrow {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 6px;
+    color: var(--rust2);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  .hero-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 68px;
+    font-weight: 700;
+    color: var(--copper3);
+    letter-spacing: 8px;
+    line-height: 1;
+    text-transform: uppercase;
+    text-shadow: 0 0 80px rgba(184,115,51,.3);
+  }
+
+  .hero-subtitle {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 5px;
+    margin-top: 14px;
+  }
+
+  .hero-tagline {
+    font-family: 'Libre Baskerville', serif;
+    font-size: 16px;
+    color: var(--text2);
+    font-style: italic;
+    margin-top: 24px;
+    max-width: 520px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.7;
+  }
+
+  .meta-badges {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 28px;
+  }
+
+  .badge {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    padding: 5px 14px;
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    background: var(--surface);
+    text-transform: uppercase;
+  }
+  .badge.copper { border-color: var(--copper); color: var(--copper2); }
+
+  /* ── SECTION ── */
+  section {
+    margin-bottom: 56px;
+    scroll-margin-top: 48px;
+  }
+
+  .sec-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 24px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .sec-num {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--rust2);
+    letter-spacing: 1px;
+    min-width: 24px;
+    opacity: .8;
+  }
+
+  .sec-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--copper2);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+  }
+
+  .sec-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--border2), transparent);
+  }
+
+  .sec-toggle {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--text3);
+    border: 1px solid var(--border);
+    padding: 3px 10px;
+    background: none;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all .15s;
+  }
+  .sec-toggle:hover { border-color: var(--copper); color: var(--copper3); }
+
+  .sec-body { overflow: hidden; transition: max-height .3s ease, opacity .3s ease; }
+  .sec-body.collapsed { max-height: 0 !important; opacity: 0; }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    padding: 20px 24px;
+    margin-bottom: 14px;
+    position: relative;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--copper);
+  }
+
+  .card.steam::before  { background: var(--steam2); }
+  .card.elec::before   { background: var(--elec2); }
+  .card.soul::before   { background: var(--soul2); }
+  .card.danger::before { background: var(--rust2); }
+  .card.neutral::before { background: var(--border2); }
+
+  .card-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--copper3);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .card.steam  .card-title { color: var(--steam2); }
+  .card.elec   .card-title { color: var(--elec2); }
+  .card.soul   .card-title { color: var(--soul2); }
+  .card.danger .card-title { color: var(--rust2); }
+
+  /* ── GRIDS ── */
+  .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+  /* ── TABLE ── */
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 12px 0; }
+  thead th {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--copper);
+    border-bottom: 1px solid var(--border2);
+    padding: 8px 12px;
+    text-align: left;
+    text-transform: uppercase;
+    background: var(--bg3);
+  }
+  tbody td {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text2);
+    vertical-align: top;
+  }
+  tbody tr:hover td { background: rgba(184,115,51,.04); }
+
+  /* ── HIGHLIGHT ── */
+  .hl {
+    border: 1px solid var(--copper);
+    background: rgba(184,115,51,.06);
+    padding: 18px 22px;
+    margin: 18px 0;
+    font-family: 'Libre Baskerville', serif;
+    font-style: italic;
+    font-size: 15px;
+    color: var(--text2);
+    line-height: 1.7;
+  }
+  .hl strong {
+    font-style: normal;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--copper3);
+    display: block;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+
+  .hl.danger { border-color: var(--rust2); background: rgba(192,67,46,.06); }
+  .hl.danger strong { color: var(--rust2); }
+  .hl.elec   { border-color: var(--elec2); background: rgba(42,168,212,.06); }
+  .hl.elec   strong { color: var(--elec2); }
+
+  /* ── POWER SOURCE TREE ── */
+  .pwr-tree {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    padding: 28px;
+    margin-bottom: 16px;
+  }
+
+  .pwr-root { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+  .pwr-node { text-align: center; }
+
+  .pwr-badge {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 3px;
+    padding: 10px 12px;
+    border: 1px solid;
+    margin-bottom: 10px;
+    display: block;
+    text-transform: uppercase;
+  }
+  .pwr-badge.steam { border-color: var(--steam2); color: var(--steam2); background: rgba(200,115,42,.07); }
+  .pwr-badge.elec  { border-color: var(--elec2);  color: var(--elec2);  background: rgba(42,168,212,.07); }
+  .pwr-badge.soul  { border-color: var(--soul2);  color: var(--soul2);  background: rgba(155,82,212,.07); }
+
+  .pwr-desc {
+    font-size: 11px;
+    color: var(--text3);
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: .5px;
+    margin-bottom: 10px;
+    line-height: 1.5;
+  }
+
+  .pwr-subs { display: flex; flex-direction: column; gap: 5px; }
+
+  .pwr-sub {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text2);
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  .pwr-mods {
+    font-family: 'Libre Baskerville', serif;
+    font-size: 10px;
+    color: var(--text3);
+    font-style: italic;
+    margin-top: 3px;
+    padding-left: 8px;
+    letter-spacing: .3px;
+  }
+
+  /* ── LOOP DIAGRAM ── */
+  .loop {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin: 24px 0;
+    flex-wrap: wrap;
+  }
+
+  .loop-step {
+    flex: 1;
+    min-width: 100px;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    padding: 14px 12px;
+    text-align: center;
+    position: relative;
+  }
+
+  .loop-step-num {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 8px;
+    color: var(--rust2);
+    letter-spacing: 2px;
+    margin-bottom: 5px;
+    display: block;
+  }
+
+  .loop-step-name {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    color: var(--copper3);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  .loop-step-sub {
+    font-size: 10px;
+    color: var(--text3);
+    margin-top: 3px;
+    font-family: 'Share Tech Mono', monospace;
+    line-height: 1.3;
+  }
+
+  .loop-arr {
+    display: flex;
+    align-items: center;
+    color: var(--copper);
+    font-size: 16px;
+    padding: 0 2px;
+    flex-shrink: 0;
+    opacity: .6;
+  }
+
+  /* ── STAT BAR ── */
+  .stat-row { margin: 7px 0; }
+  .stat-lbl {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--text3);
+    margin-bottom: 3px;
+    letter-spacing: 1px;
+  }
+  .stat-track { height: 3px; background: var(--border); }
+  .stat-fill  { height: 100%; background: linear-gradient(90deg, var(--copper), var(--copper3)); transition: width .7s ease; }
+  .stat-fill.s { background: linear-gradient(90deg, var(--steam), var(--steam2)); }
+  .stat-fill.e { background: linear-gradient(90deg, var(--elec), var(--elec2)); }
+  .stat-fill.r { background: linear-gradient(90deg, var(--soul), var(--soul2)); }
+  .stat-fill.d { background: linear-gradient(90deg, var(--rust), var(--rust2)); }
+
+  /* ── PRIORITY TAGS ── */
+  .tag {
+    display: inline-block;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 2px;
+    padding: 3px 8px;
+    border: 1px solid;
+    text-transform: uppercase;
+    margin: 2px;
+  }
+  .tag.hi  { border-color: var(--rust2);   color: var(--rust2); }
+  .tag.mid { border-color: var(--copper2); color: var(--copper2); }
+  .tag.lo  { border-color: var(--text3);  color: var(--text3); }
+  .tag.ok  { border-color: #4cae6e; color: #4cae6e; }
+
+  /* ── OVERLOAD METER (dekoratif) ── */
+  .ovl-meter {
+    border: 1px solid var(--border2);
+    background: var(--bg3);
+    padding: 14px 18px;
+    margin: 14px 0;
+  }
+
+  .ovl-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .ovl-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--copper);
+    letter-spacing: 3px;
+  }
+
+  .ovl-track {
+    height: 8px;
+    background: var(--border);
+    position: relative;
+  }
+
+  .ovl-zones {
+    display: flex;
+    height: 100%;
+  }
+
+  .ovl-zone {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ovl-zone-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 1px;
+    margin-top: 5px;
+    text-align: center;
+  }
+
+  /* ── DIVIDER ── */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border2), transparent);
+    margin: 44px 0;
+  }
+
+  /* ── PROSE ── */
+  p { margin-bottom: 10px; color: var(--text); }
+  ul, ol { padding-left: 22px; color: var(--text2); margin-bottom: 10px; }
+  li { margin-bottom: 3px; }
+  strong { color: var(--copper3); font-weight: 600; }
+  em { color: var(--text2); }
+
+  /* ── SCROLL ── */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg2); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); }
+
+  /* ── RESPONSIVE ── */
+  @media(max-width:820px){
+    #sidenav { display:none; }
+    main, #topbar { margin-left:0; }
+    .g2, .g3, .pwr-root { grid-template-columns:1fr; }
+    .hero-title { font-size:40px; }
+  }
+
+  /* ── OVERLOAD ANIMATION ── */
+  @keyframes pulse-red {
+    0%,100% { opacity:.6; }
+    50% { opacity:1; }
+  }
+  .pulsing { animation: pulse-red 1.4s ease-in-out infinite; }
+</style>
+</head>
+<body>
+
+<!-- SIDE NAV -->
+<nav id="sidenav">
+  <div class="nav-logo">
+    <div class="nav-logo-title">CLOCKWORK<br>REQUIEM</div>
+    <div class="nav-logo-sub">GDD v0.1 — 2026</div>
+  </div>
+
+  <div class="nav-group">Temel</div>
+  <a href="#overview"><span class="nav-num">01</span>Genel Bakış</a>
+  <a href="#vision"><span class="nav-num">02</span>Vizyon & Hedef</a>
+  <a href="#world"><span class="nav-num">03</span>Dünya & Lore</a>
+
+  <div class="nav-group">Mekanikler</div>
+  <a href="#loop"><span class="nav-num">04</span>Core Game Loop</a>
+  <a href="#power"><span class="nav-num">05</span>Güç Kaynağı Sistemi</a>
+  <a href="#combat"><span class="nav-num">06</span>Savaş Sistemi</a>
+  <a href="#overload"><span class="nav-num">07</span>Overload Mekaniği</a>
+  <a href="#modular"><span class="nav-num">08</span>Modüler Beden</a>
+  <a href="#team"><span class="nav-num">09</span>Takım Kurgusu</a>
+
+  <div class="nav-group">İçerik</div>
+  <a href="#map"><span class="nav-num">10</span>Harita & Bölgeler</a>
+  <a href="#loot"><span class="nav-num">11</span>Loot & Parçalar</a>
+  <a href="#pvp"><span class="nav-num">12</span>Async PvP</a>
+  <a href="#meta"><span class="nav-num">13</span>Meta Progresyon</a>
+
+  <div class="nav-group">Yapım</div>
+  <a href="#art"><span class="nav-num">14</span>Sanat & Atmosfer</a>
+  <a href="#audio"><span class="nav-num">15</span>Ses Tasarımı</a>
+  <a href="#tech"><span class="nav-num">16</span>Teknik & Roadmap</a>
+</nav>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="tb-item">CLOCKWORK REQUIEM</div>
+  <div class="tb-item">Geliştirici: <span>TBD</span></div>
+  <div class="tb-item">Tür: <span>Roguelite Autobattler</span></div>
+  <div class="tb-item">Durum: <span>Pre-Production</span></div>
+  <div class="tb-item">GDD: <span>v0.1 — Mart 2026</span></div>
+</div>
+
+<!-- MAIN -->
+<main>
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="hero-eyebrow">Game Design Document</div>
+    <h1 class="hero-title">Clockwork<br>Requiem</h1>
+    <div class="hero-subtitle">Roguelite · Autobattler · Post-Collapse Industrial</div>
+    <div class="hero-tagline">
+      "Güçlü bir parça sökmek seni daha tehlikeli yapar.<br>Ama saat her zaman bir bedel ister."
+    </div>
+    <div class="meta-badges">
+      <div class="badge copper">Roguelite Autobattler</div>
+      <div class="badge">PC (Steam)</div>
+      <div class="badge">Singleplayer + Async PvP</div>
+      <div class="badge">Pixel Art — Industrial</div>
+      <div class="badge">Pre-Production 2026</div>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- 01 — GENEL BAKIŞ -->
+  <!-- ═══════════════════════════════════════ -->
+  <section id="overview">
+    <div class="sec-header" onclick="toggle(this)">
+      <div class="sec-num">01</div>
+      <div class="sec-title">Genel Bakış</div>
+      <div class="sec-line"></div>
+      <button class="sec-toggle">▾ Daralt</button>
+    </div>
+    <div class="sec-body">
+      <div class="hl">
+        <strong>Tek Cümle Tanımı</strong>
+        Clockwork Requiem; uygarlık çökmüş bir gelecekte virüsle ele geçirilmiş otomatonlara karşı savaşan son bilinçli makinenin, ekibini modüler parçalarla inşa ettiği ve her güçlü parçanın patlama riskini artırdığı bir roguelite autobattler oyunudur.
+      </div>
+
+      <div class="g2">
+        <div class="card">
+          <div class="card-title">Oyun Kimliği</div>
+          <table>
+            <tbody>
+              <tr><td><strong>Tür</strong></td><td>Roguelite Autobattler RPG</td></tr>
+              <tr><td><strong>Alt Tür</strong></td><td>Post-Apocalyptic Industrial, Sci-Gothic</td></tr>
+              <tr><td><strong>Perspektif</strong></td><td>2D — Karanlık Top-down / Isometric</td></tr>
+              <tr><td><strong>Grafik Stili</strong></td><td>Pixel Art — High Contrast Industrial</td></tr>
+              <tr><td><strong>Oyun Modu</strong></td><td>Singleplayer + Async Online PvP</td></tr>
+              <tr><td><strong>Platform</strong></td><td>PC (Steam) — Console sonrası</td></tr>
+              <tr><td><strong>Fiyat Hedefi</strong></td><td>$14.99 – $17.99</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card danger">
+          <div class="card-title">Mekanik DNA — Özet</div>
+          <div class="stat-row">
+            <div class="stat-lbl"><span>Sistem Derinliği</span><span>97%</span></div>
+            <div class="stat-track"><div class="stat-fill" style="width:97%"></div></div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-lbl"><span>Risk / Ödül Gerilimi</span><span>95%</span></div>
+            <div class="stat-track"><div class="stat-fill d" style="width:95%"></div></div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-lbl"><span>Yeniden Oynanabilirlik</span><span>90%</span></div>
+            <div class="stat-track"><div class="stat-fill s" style="width:90%"></div></div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-lbl"><span>Takım Sinerjisi</span><span>85%</span></div>
+            <div class="stat-track"><div class="stat-fill e" style="width:85%"></div></div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-lbl"><span>Anlatı Atmosferi</span><span>88%</span></div>
+            <div class="stat-track"><div class="stat-fill r" style="width:88%"></div></div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-lbl"><span>Erişilebilirlik (yeni oyuncu)</span><span>62%</span></div>
+            <div class="stat-track"><div class="stat-fill" style="width:62%"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Doomfields'ten Farkı — Çekirdek Pivotlar</div>
+        <table>
+          <thead><tr><th>Katman</th><th>Doomfields</th><th>Clockwork Requiem</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Karakter kaynağı</strong></td><td>İnsani kahramanlar, arketip sınıfları</td><td>Bozuk makineler — düşmanlardan sökülen parçalar</td></tr>
+            <tr><td><strong>Sınıf sistemi</strong></td><td>Rol (savaşçı/hile/büyücü) ağacı</td><td>Güç kaynağı × Gövde × Silah modülü</td></tr>
+            <tr><td><strong>Loot mantığı</strong></td><td>Ekipman bul, karak­tere tak</td><td>Düşman bedeninden parça söküp takımına entegre et</td></tr>
+            <tr><td><strong>Kaynak dengesi</strong></td><td>Gold + HP + Keepsake</td><td>Isı (Heat) + Parça Bütünlüğü + Bilinç Skoru</td></tr>
+            <tr><td><strong>Risk katmanı</strong></td><td>Permadeath koşusu</td><td>Permadeath + Overload patlaması + Virüs bulaşması</td></tr>
+            <tr><td><strong>Anlatı tonu</strong></td><td>Macera, dark fantasy</td><td>Varoluşsal yalnızlık, endüstriyel trajedi</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- 02 — VİZYON -->
+  <section id="vision">
+    <div class="sec-header" onclick="toggle(this)">
+      <div class="sec-num">02</div>
+      <div class="sec-title">Vizyon & Hedef Kitle</div>
+      <div class="sec-line"></div>
+      <button class="sec-toggle">▾ Daralt</button>
+    </div>
+    <div class="sec-body">
+      <div class="g2">
+        <div class="card">
+          <div class="card-title">Tasarım Vizyonu</div>
+          <ul>
+            <li>Her savaş sonrası <strong>"söküyor muyum?"</strong> sorusu anlamlı olmalı — Overload riski ile Modüler Beden arasındaki gerilim oyunun kalbi</li>
+            <li>Oyuncu <strong>tek bilinçli varlık</strong> — bu yalnızlık, her kararı ağırlaştırır</li>
+            <li>Güç kaynağı seçimi <strong>run kimliğini</strong> belirler: buhar ağır ve ısıya dayanıklı, elektrik hızlı ve kırılgan, ruh öngörülemez</li>
+            <li>Atmosfer <strong>seyir tatmini</strong> sağlamalı — fabrika zemini, buhar fışkırması, metal kıvılcımı</li>
+            <li>Başarısızlık <strong>öğretmeli:</strong> "hangi parça ısıyı patlatttı?" net görülmeli</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-title">Hedef Kitle</div>
+          <table>
+            <tbody>
+              <tr><td><strong>Birincil</strong></td><td>Roguelite + Autobattler hayranları (Slay the Spire, TFT, Hades)</td></tr>
+              <tr><td><strong>İkincil</strong></td><td>Mekanik / steampunk estetik sevenler</td></tr>
+              <tr><td><strong>Üçüncül</strong></td><td>Koyu atmosfer + varoluşsal hikaye arayanlar (Darkest Dungeon, SOMA)</td></tr>
+              <tr><td><strong>Yaş</strong></td><td>17 – 40</td></tr>
+              <tr><td><strong>Referans Oyunlar</strong></td><td>Doomfields, Slay the Spire, Into the Breach, Darkest Dungeon, SOMA</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card danger">
+        <div class="card-title">Rakip Analizi & Fark Noktaları</div>
+        <table>
+          <thead><tr><th>Rakip</th><th>Ortak Yön</th><th>CR Farkı</th></tr></thead>
+          <tbody>
+            <tr><td>Doomfields</td><td>Roguelite autobattler, sınıf ağacı</td><td>Mekanik virüs tehdidi, Overload riski, varoluşsal anlatı</td></tr>
+            <tr><td>Slay the Spire</td><td>Roguelite yapı, ölçülü risk kararları</td><td>Kart değil parça sistemi; savaş otomatik, hazırlık stratejik</td></tr>
+            <tr><td>Into the Breach</td><td>Mekanik düşmanlar, hasar önleme</td><td>Takım boyutu, loot derinliği, sınıf dallanması</td></tr>
+            <tr><td>TFT</td><td>Autobattler, sinerji kurgusu</td><td>Derin tek oyunculu roguelite + kalıcı lore + Overload gerilimi</td></tr>
+            <tr><td>Darkest Dungeon</td><td>Atmosfer, psikolojik baskı</td><td>Savaş otomatik; baskı "ısı" ile mekanik olarak somutlaşıyor</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- 03 — DÜNYA & LORE -->
+  <section id="world">
+    <div class="sec-header" onclick="toggle(this)">
+      <div class="sec-num">03</div>
+      <div class="sec-title">Dünya & Lore</div>
+      <div class="sec-line"></div>
+      <button class="sec-toggle">▾ Daralt</button>
+    </div>
+    <div class="sec-body">
+      <div class="hl">
+        <strong>Dünya Kurgusu</strong>
+        İnsanlık çok önce yok oldu. Bunun nasıl olduğunu kimse bilmiyor — en azından kalan makineler bilmiyor. Geride devasa endüstriyel kompleksler, terk edilmiş fabrikalar ve işlemeye devam eden üretim hatları kaldı. Otomatonlar, yaratıcıları olmadan yaşadı; bazıları görevlerini sürdürdü, bazıları kendi protokollerini geliştirdi. Sonra <em>Kenet Virüsü</em> yayıldı.
+      </div>
+
+      <div class="g2">
+        <div class="card">
+          <div class="card-title">Kenet Virüsü — Hikayenin Tetikleyicisi</div>
+          <p>Kenet, bir otomatonun mekanik sinir sistemine yerleşen kod-bazlı bir patojendir. Enfekte otomatonlar bilinçlerini kaybetmez — tam tersine, <strong>tek bir dürtüye</strong> indirgenir: yayılmak. Diğer otomatonlara saldırır, onları parçalar ve kendi yapısına entegre eder.</p>
+          <ul>
+            <li>Bulaşma: fiziksel temas (çarpışma, parça transferi)</li>
+            <li>Belirti: göz ışıklarının kızarması, hareket deseninin bozulması</li>
+            <li>Son evre: tam otonom saldırgan ağ — "Kenet Sürüsü"</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-title">Oyuncu: AXIOM-Ø</div>
+          <p>Oyuncu, <strong>AXIOM-Ø</strong> (sıfır serisi) olarak adlandırılan ilk nesil bilinç-otomatondur. Yaratıcıların "deney birimi" olarak üretilmiş, tam özerk karar verebilen tek model. Kenet Virüsü'ne karşı doğuştan bağışıklığının nedeni bu mimari farklılıktır.</p>
+          <ul>
+            <li>Amacı: Kenet'in kaynağını bulmak ve yok etmek</li>
+            <li>Yöntemi: Enfekte otomatonları durdurmak — bazen parçalarını kullanmak</li>
+            <li>İç çatışması: Düşmanın parçasını kullanmak onu daha mı tehlikeli yapıyor?</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="g3">
+        <div class="card steam">
+          <div class="card-title">Bölge 1 — Kazan Fabrikaları</div>
+          <p>Aktif buhar üretim kompleksleri. Sis içinde yavaş devlerin alanı. En eski, en sağlam otomatonlar burada — ve en ağır enfeksiyonlar.</p>
+        </div>
+        <div class="card elec">
+          <div class="card-title">Bölge 2 — Voltaj Arşivleri</div>
+          <p>Bilgi depolama ve iletişim merkezleri. Hızlı, kırılgan elektrik-otomatonların yurdu. Kenet burada ağ olarak yayılıyor.</p>
+        </div>
+        <div class="card soul">
+          <div class="card-title">Bölge 3 — Ruh Laboratuvarları</div>
+          <p>İnsanların bilinç deneylerini yürüttüğü terk edilmiş tesisler. Ruh-otomatonlar burada doğdu. En tehlikeli, en öngörülemez alan.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Bölge 4 — Kenet Kalbi (Son Alan)</div>
+        <p>Virüsün yayıldığı sıfır noktası. Mimari anlamsızlaşmış — demir ve kod iç içe geçmiş, çılgın bir makine katedrali. <strong>Büyük Durma</strong>'nın gerçek sebebi burada saklı. Axiom-Ø'nın varoluşunun cevabı da.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- 04 — CORE GAME LOOP -->
+  <section id="loop">
+    <div class="sec-header" onclick="toggle(this)">
+      <div class="sec-num">04</div>
+      <div class="sec-title">Core Game Loop</div>
+      <div class="sec-line"></div>
+      <button class="sec-toggle">▾ Daralt</button>
+    </div>
+    <div class="sec-body">
+      <div class="loop">
+        <div class="loop-step">
+          <span class="loop-step-num">PHASE 01</span>
+          <div class="loop-step-name">Uyanış</div>
+          <div class="loop-step-sub">Güç kaynağı seç, bölgeye gir</div>
+        </div>
+        <div class="loop-arr">→</div>
+        <div class="loop-step">
+          <span class="loop-step-num">PHASE 02</span>
+          <div class="loop-step-name">Harita</div>
+          <div class="loop-step-sub">Oda seç, risk ölç</div>
+        </div>
+        <div class="loop-arr">→</div>
+        <div class="loop-step">
+          <span class="loop-step-num">PHASE 03</span>
+          <div class="loop-step-name">Savaş</div>
+          <div class="loop-step-sub">Otomatik — izle, analiz et</div>
+        </div>
+        <div class="loop-arr">→</div>
+        <div class="loop-step">
+          <span class="loop-step-num">PHASE 04</span>
+          <div class="loop-step-name">Söküm</div>
+          <div class="loop-step-sub">Hangi parçayı al?</div>
+        </div>
+        <div class="loop-arr">→</div>
+        <div class="loop-step">
+          <span class="loop-step-num">PHASE 05</span>
+          <div class="loop-step-name">Isı Yönetimi</div>
+          <div class="loop-step-sub">Soğut, dengele, hazırlan</div>
+        </div>
+        <div class="loop-arr">→</div>
+        <div class="loop-step">
+          <span class="loop-step-num">PHASE 06</span>
+          <div class="loop-step-name">İlerleme</div>
+          <div class="loop-step-sub">Seviye, split, boss</div>
+        </div>
+      </div>
+
+      <div class="g2">
+        <div class="card">
+          <div class="card-title">Makro Loop (Bir Koşu)</div>
+          <ol>
+            <li><strong>Koşu Başlangıcı:</strong> Güç kaynağı seç (Buhar / Elektrik / Ruh) — bu seçim koşunun DNA'sı</li>
+            <li><strong>Takım Kurma:</strong> Her aşama geçildikçe yeni otomaton birimi bulunur / inşa edilir (maks. 5)</li>
+            <li><strong>Savaş Döngüsü:</strong> Oda → otomatik savaş → söküm kararı</li>
+            <li><strong>Seviye Sistemi:</strong> Lv.10'da Gövde Tipi seçimi, Lv.20'de Silah Modülü seçimi</li>
+            <li><strong>Isı Yönetimi:</strong> Her parça eklemek ısı eşiğini artırır — Overload riski büyür</li>
+            <li><strong>Boss & Bölge Finali:</strong> Her bölgenin Kenet Komutanı boss olarak bekler</li>
+            <li><strong>Koşu Sonu:</strong> Zafer ya da patlama — her ikisi de meta ilerlemesi sağlar</li>
+          </ol>
+        </div>
+        <div class="card danger">
+          <div class="card-title">Mikro Loop (Tek Oda)</div>
+          <ol>
+            <li><strong>Oda Seçimi:</strong> Haritada ikon gör — savaş, tamir, terminal, boss</li>
+            <li><strong>Ön Hazırlık:</strong> Takım sıralaması, taktik direktifi, ısı durumu kontrol</li>
+            <li><strong>Savaş İzleme:</strong> Otomatik — buhar, elektrik, ruh efektleri görsel olarak ayrışır</li>
+            <li><strong>Söküm Ekranı:</strong> 1–3 parça sunar. Her birinin ısı maliyeti gösterilir</li>
+            <li><strong>Isı Hesabı:</strong> Yeni parça + mevcut ısı → eşik aşılıyor mu?</li>
+            <li><strong>Devam:</strong> Sonraki odaya geç veya Tamir İstasyonunda soğu</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Oda Tipleri</div>
+        <div class="g3">
+          <div>
+            <p><strong>⚙ Savaş Odası</strong></p>
+            <p>Kenet enfekte otomatonlar. Zorluk ilerledikçe sürü büyür, senkronize saldırır.</p>
+          </div>
+          <div>
+            <p><strong>🔧 Tamir İstasyonu</strong></p>
+            <p>HP ve Isı sıfırlanır. Parça yenileme seçeneği. Zaman maliyeti var (tik birimi).</p>
+          </div>
+          <div>
+            <p><strong>📡 Veri Terminali</strong></p>
+            <p>Lore parçaları, şifreli protokoller. Oyuncu için pasif buff veya risk seçimi.</p>
+          </div>
+          <div>
+            <p><strong>💀 Elite Oda</strong></p>
+            <p>Komutan-seviye Kenet birimi. Yüksek ısı maliyetli nadir parça ödülü.</p>
+          </div>
+          <div>
+            <p><strong>⚡ Boss Odası</strong></p>
+            <p>Bölge Komutanı. Benzersiz mekanikleri var — bölgeye özgü.</p>
+          </div>
+          <div>
+            <p><strong>🧩 Parça Pazarı</strong></p>
+            <p>Bilinç Skoru harca, parça seç. Nadir parçalara buradan da erişilir.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- 05 — GÜÇ KAYNAĞI SİSTEMİ -->
+  <section id="power">
+    <div class="sec-header" onclick="toggle(this)">
+      <div class="sec-num">05</div>
+      <div class="sec-title">Güç Kaynağı Sistemi — 3×3×3</div>
+      <div class="sec-line"></div>
+      <button class="sec-toggle">▾ Daralt</button>
+    </div>
+    <div class="sec-body">
+      <div class="hl">
+        <strong>Formül</strong>
+        3 Güç Kaynağı (Lv.1) → 9 Gövde Tipi (Lv.10) → 27 Silah Modülü (Lv.20)<br>
+        Her otomaton birimi bu ağaçta tek bir yol izler. 5 birimli takımın 5 farklı yolu olabilir.
+      </div>
+
+      <div class="pwr-tree">
+        <div class="pwr-root">
+
+          <!-- BUHAR -->
+          <div class="pwr-node">
+            <span class="pwr-badge steam">⚙ Buhar</span>
+            <div class="pwr-desc">Ağır, dayanıklı, ısıya dirençli.<br>Yavaş ama patlayıcı güç.</div>
+            <div class="pwr-subs">
+              <div class="pwr-sub">DÖKME GÖVDE
+                <div class="pwr-mods">Piston Yumruğu · Demir Bastion · Çelik Fırtına</div>
+              </div>
+              <div class="pwr-sub">ZIRH GÖVDE
+                <div class="pwr-mods">Topçu · Barikat · İstimlakçı</div>
+              </div>
+              <div class="pwr-sub">KAZAN GÖVDE
+                <div class="pwr-mods">Fırın · Buharlama · Basınç Patlaması</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ELEKTRİK -->
+          <div class="pwr-node">
+            <span class="pwr-badge elec">⚡ Elektrik</span>
+            <div class="pwr-desc">Hızlı, hassas, kırılgan.<br>Isıya çok duyarlı — dikkatli kullan.</div>
+            <div class="pwr-subs">
+              <div class="pwr-sub">TEL GÖVDE
+                <div class="pwr-mods">Ark Kaynakçı · Zincir Şimşek · İletken</div>
+              </div>
+              <div class="pwr-sub">LENS GÖVDE
+                <div class="pwr-mods">Keskin Nişancı · Ayna Dizisi · Yakıcı</div>
+              </div>
+              <div class="pwr-sub">RÖLE GÖVDE
+                <div class="pwr-mods">Destek Ağı · Amplifikatör · Devre Kesici</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RUH -->
+          <div class="pwr-node">
+            <span class="pwr-badge soul">☽ Ruh</span>
+            <div class="pwr-desc">Öngörülemez, güçlü, bilinç-yüklü.<br>En yüksek tavan — en yüksek risk.</div>
+            <div class="pwr-subs">
+              <div class="pwr-sub">KAFES GÖVDE
+                <div class="pwr-mods">Hayalet · Emici · Bağlayıcı</div>
+              </div>
+              <div class="pwr-sub">REZONANS GÖVDE
+                <div class="pwr-mods">Çığlık · Dalga · Armoni</div>
+              </div>
+              <div class="pwr-sub">YANKI GÖVDE
+                <div class="pwr-mods">Eko · Gölge · Yansıma</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="g3">
+        <div class="card steam">
+          <div class="card-title">Buhar Profili</div>
+          <div class="stat-row"><div class="stat-lbl"><span>HP</span><span>95%</span></div><div class="stat-track"><div class="stat-fill s" style="width:95%"></div></div></div>
+          <div class="stat-row"><div class="stat-lbl"><span>Hasar</span><span>70%</span></div><div class="stat-track"><div class="stat-fill s" style="width:70%"></div></div></div>
+          <div class="stat-row"><div class="stat-lbl"><span>Hız</span><span>35%</span></div><div class="stat-track"><div class="stat-fill s" style="width:35%"></div></div></div>
+          <div class="stat-row"><div class="stat-lbl"><span>Isı Direnci</span><span>90%</span></div><div class="stat-track"><div class="stat-fill s" style="width:90%"></div></div></div>
+          <p style="margin-top:10px;font-size:13px;color:var(--text2)">Ön saf tankı. Overload'dan en az etkilenen tür — ısıyı buharla iter. Yavaş ama yok edilmesi zor.</p>
+        </div>
+        <div class="card elec">
+          <div class="card-title">Elektrik Profili</div>
+          <div class="stat-row"><div class="stat-lbl"><span>HP</span><span>45%</span></div><div class="stat-track"><div class="stat-fill e" style="width:45%"></div></div></div>
+          <div class="stat-row"><div class="stat-lbl"><span>Hasar</span><span>85%</span></div><div class="stat-track"><div class="stat-fill e" style="width:85%"></div></div></div>
+          <div class="stat-row"><div class="stat-lbl"><span>Hız</span><span>95%</span></div><div class="stat-track"><div class="stat-fill e" style="width:95%"></div></div></div>
+          <div class="stat-row"><div class="stat-lbl"><span>Isı Direnci</span><span>25%</span></div><div class="stat-track"><div class="stat-fill e" style="width:25%"></div></div></div>
+          <p style="margin-top:10px;font-size:13px;color:var(--text2)">Hız ve hasar ustası. Overload eşiği en düşük — tek bir güçlü parça patlama riskini katlayabilir. Cam top.</p>
+        </div>
+        <div class="card soul">
+          <div class="card-title">Ruh Profili</div>
+          <div class="stat-row"><div class="stat-lbl"><span>HP</span><span>60%</span></div><div class="stat-track"><div class="stat-fill r" style="width:60%"></div></div></div>
+          <div class="stat-row"><div class="stat-lbl"><span>Hasar</span><span>90%</span></div><div class="stat-track"><div class="stat-fill r" style="width:90%"></div></div></div>
+          <div class="stat-row"><div class="stat-lbl"><span>Hız</span><span>65%</span></div><div class="stat-track"><div class="stat-fill r" style="width:65%"></div></div></div>
+          <div class="stat-row"><div class="stat-lbl"><span>Isı Direnci</span><span>55%</span></div><div class="stat-track"><div class="stat-fill r" style="width:55%"></div></div></div>
+          <p style="margin-top:10px;font-size:13px;color:var(--text2)">En yüksek tavan — ama öngörülemez. Bilinç Skoru yükseldikçe kontrol dışı davranış gösterebilir. Zirve ödüllü.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Seviye Split Tablosu</div>
+        <table>
+          <thead><tr><th>Seviye</th><th>Olay</th><th>Seçim Mekanizması</th></tr></thead>
+          <tbody>
+            <tr><td>1 – 9</td><td>Güç Kaynağı büyüyor</td><td>Temel stat gelişimi, pasif yetenekler</td></tr>
+            <tr><td><strong>10</strong></td><td><strong>1. Split — Gövde Tipi</strong></td><td>3 gövde tipinden seç. Her biri farklı Overload eşiği ve savunma profili</td></tr>
+            <tr><td>11 – 19</td><td>Gövde uzmanlaşıyor</td><td>Gövdeye özgü pasif ağaç, ısı yönetim yetenekleri</td></tr>
+            <tr><td><strong>20</strong></td><td><strong>2. Split — Silah Modülü</strong></td><td>3 modülden seç. Saldırı stilini ve nihai yeteneği belirler</td></tr>
+            <tr><td>21+</td><td>Final konfigürasyon</td><td>Signature ability kilidini açar. Overload patlama etkisi de bu aşamada belirlenir</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- 06 — SAVAŞ SİSTEMİ -->
+  <section id="combat">
+    <div class="sec-header" onclick="toggle(this)">
+      <div class="sec-num">06</div>
+      <div class="sec-title">Savaş Sistemi</div>
+      <div class="sec-line"></div>
+      <button class="sec-toggle">▾ Daralt</button>
+    </div>
+    <div class="sec-body">
+      <div class="hl">
+        <strong>Temel İlke</strong>
+        Savaşlar tamamen otomatiktir. Oyuncunun rolü hazırlık aşamasında alınan stratejik kararlardır. İzleme = seyir tatmini. Hazırlık = zeka.
+      </div>
+
+      <div class="g2">
+        <div class="card">
+          <div class="card-title">Savaş Akışı</div>
+          <ol>
+            <li>Taktik direktifi ve ısı durumu ayarla</li>
+            <li>Otomatonlar oda girişinde pozisyona girer</li>
+            <li>Hız istatistiğine göre sıra belirlenir</li>
+            <li>Her birim kendi AI protokolüne göre hareket eder</li>
+            <li>Özel yetenekler koşullara bağlı tetiklenir</li>
+            <li>Isı birikmesi her güçlü yeteneği kullanımda artar</li>
+            <li>Tüm Kenet birimleri yok edilince savaş biter</li>
+            <li>Söküm Ekranı açılır</li>
+          </ol>
+        </div>
+        <div class="card danger">
+          <div class="card-title">Temel Savaş İstatistikleri</div>
+          <table>
+            <tbody>
+              <tr><td><strong>HP</strong></td><td>Yapısal bütünlük. Sıfırda devre dışı (koşu sonu değil — birim kaybı)</td></tr>
+              <tr><td><strong>ATK</strong></td><td>Fiziksel / Enerji saldırı gücü</td></tr>
+              <tr><td><strong>DEF</strong></td><td>Zırh değeri. Gelen fiziksel hasarı azaltır</td></tr>
+              <tr><td><strong>SPD</strong></td><td>Eylem sırası. Kaçınma hesabına girer</td></tr>
+              <tr><td><strong>HEAT</strong></td><td>Mevcut ısı seviyesi. Eşik aşılırsa Overload</td></tr>
+              <tr><td><strong>THRESH</strong></td><td>Overload eşiği. Parça ekledikçe düşer</td></tr>
+              <tr><td><strong>SYN</strong></td><td>Bilinç Skoru (Ruh tipi için kritik)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="g3">
+        <div class="card">
+          <div class="card-title">Durum Efektleri</div>
+          <ul>
+            <li><strong>Pas:</strong> Savunma erimesi, sürekli</li>
+            <li><strong>Kısa Devre:</strong> SPD sıfır, 1 tur</li>
+            <li><strong>Aşırı Isınma:</strong> ATK +%30 ama HEAT +5/tur</li>
+            <li><strong>Donma:</strong> Eylem atlatır</li>
+            <li><strong>Kenet Bulaşması:</strong> Geçici kontrol kaybı</li>
+            <li><strong>Rezonans:</strong> Ruh tipi empati hasarı</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-title">Taktik Direktifleri</div>
+          <ul>
+            <li><strong>Saldırı:</strong> En yakın düşmana odaklan</li>
+            <li><strong>Savunma:</strong> Arka sıraya çekil, düşman çeker</li>
+            <li><strong>Hedefleme:</strong> Belirli güç kaynağına öncelik ver</li>
+            <li><strong>Isı Tasarrufu:</strong> Güçlü yetenekleri kullanma</li>
+            <li><strong>Berserker:</strong> Tüm ısıyı harca, maksimum güç</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-title">Sinerji Protokolleri</div>
+          <p>Takım direktiflerini tüm ekip etkileyen pasif kurallar:</p>
+          <ul>
+            <li>2+ Buhar birimi: Ortak Isı Havuzu — paylaşımlı eşik</li>
+            <li>2+ Elektrik birimi: Zincir iletim bonusu</li>
+            <li>Buhar + Ruh: Buharlı Ruh Kalkanı pasifi</li>
+            <li>Tüm farklı: Kaotik Sinerji — rastgele güçlü efekt</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- 07 — OVERLOAD -->
+  <section id="overload">
+    <div class="sec-header" onclick="toggle(this)">
+      <div class="sec-num">07</div>
+      <div class="sec-title">Overload Mekaniği</div>
+      <div class="sec-line"></div>
+      <button class="sec-toggle">▾ Daralt</button>
+    </div>
+    <div class="sec-body">
+      <div class="hl danger">
+        <strong>Tasarım Kalbi</strong>
+        Overload, oyunun en kritik gerilim noktasıdır. Güçlü bir parça takmak seni daha güçlü yapar — ama eşiğini düşürür. Bu asla "iyi ya da kötü" değil, her zaman "ne kadar daha dayanabilirim?" sorusudur.
+      </div>
+
+      <!-- Overload Meter -->
+      <div class="ovl-meter">
+        <div class="ovl-header">
+          <div class="ovl-label">// HEAT MANAGEMENT SYSTEM //</div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text3);">AXIOM-Ø UNIT #001</div>
+        </div>
+        <div style="display:flex;gap:0;height:16px;border:1px solid var(--border2);">
+          <div style="flex:4;background:rgba(76,174,110,.15);border-right:1px solid var(--border2);display:flex;align-items:center;justify-content:center;">
+            <span style="font-family:'Share Tech Mono',monospace;font-size:8px;color:#4cae6e;letter-spacing:1px;">GÜVENLİ</span>
+          </div>
+          <div style="flex:3;background:rgba(224,175,10,.12);border-right:1px solid var(--border2);display:flex;align-items:center;justify-content:center;">
+            <span style="font-family:'Share Tech Mono',monospace;font-size:8px;color:#d4a82a;letter-spacing:1px;">UYARI</span>
+          </div>
+          <div style="flex:2;background:rgba(192,67,46,.15);border-right:1px solid var(--border2);display:flex;align-items:center;justify-content:center;">
+            <span style="font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--rust2);letter-spacing:1px;">KRİTİK</span>
+          </div>
+          <div class="pulsing" style="flex:1;background:rgba(192,67,46,.35);display:flex;align-items:center;justify-content:center;">
+            <span style="font-family:'Share Tech Mono',monospace;font-size:8px;color:#ff6b4a;letter-spacing:1px;">PATLAMA</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:0;margin-top:4px;">
+          <div style="flex:4;text-align:center;font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--text3);">0 – 40%</div>
+          <div style="flex:3;text-align:center;font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--text3);">40 – 70%</div>
+          <div style="flex:2;text-align:center;font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--text3);">70 – 90%</div>
+          <div style="flex:1;text-align:center;font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--rust2);">90%+</div>
+        </div>
+      </div>
+
+      <div class="g2">
+        <div class="card">
+          <div class="card-title">Isı Kaynakları</div>
+          <table>
+            <tbody>
+              <tr><td><strong>Parça ekleme</strong></td><td>Her yeni modül +ısı eşiği maliyeti</td></tr>
+              <tr><td><strong>Güçlü yetenek kullanımı</strong></td><td>Savaşta +HEAT birikimi</td></tr>
+              <tr><td><strong>Hasar alma</strong></td><td>Yüksek hasar = küçük ısı artışı</td></tr>
+              <tr><td><strong>Kenet efektleri</strong></td><td>Bazı düşmanlar doğrudan ısı artırır</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card danger">
+          <div class="card-title">Isı Azaltma Yöntemleri</div>
+          <table>
+            <tbody>
+              <tr><td><strong>Tamir İstasyonu</strong></td><td>Tam sıfırlama — zaman maliyeti</td></tr>
+              <tr><td><strong>Soğutma Modülü</strong></td><td>Özel parça: pasif ısı azaltma</td></tr>
+              <tr><td><strong>Parça Çıkarma</strong></td><td>Bir modülü söküp at — ısı düşer</td></tr>
+              <tr><td><strong>Savunma Direktifi</strong></td><td>Savaşta ısı birikimine direnç</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Overload Sonuçları — Aşama Sistemi</div>
+        <div class="g3">
+          <div>
+            <p><strong style="color:var(--steam2);">Uyarı Fazı (40–70%)</strong></p>
+            <p>Savaş animasyonlarında kızarma başlar. Belirli yetenekler geçici devre dışı düşer. Oyuncu uyarı alır.</p>
+          </div>
+          <div>
+            <p><strong style="color:var(--rust2);">Kritik Faz (70–90%)</strong></p>
+            <p>Her turda HEAT +2 otomatik artar. Güçlü yetenekler +%50 hasar verir ama +%40 ısı üretir. Karar anı.</p>
+          </div>
+          <div>
+            <p><strong style="color:#ff6b4a;">Patlama (90%+)</strong></p>
+            <p>Birim devre dışı. Alan hasarı — komşu birimlere ve <em>düşmanlara</em> hasar verir. Nadir: patlamanın kendisi savaşı kazandırabilir.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="hl elec">
+        <strong>Tasarım Notu — "Kasıtlı Patlama"</strong>
+        Deneyimli oyuncular Overload'u silah olarak kullanmayı öğrenecek. Kritik fazda bir birimi "kurban" edip alan hasarıyla savaşı kazanmak mümkün olmalı — ama bu strateji riskli ve kaynak maliyetli. "Belki bu savaşı patlatarak kazanabilirim" düşüncesi, her savaş öncesi bir seçenek olmalı.
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- 08 — MODÜLER BEDEN -->
+  <section id="modular">
+    <div class="sec-header" onclick="toggle(this)">
+      <div class="sec-num">08</div>
+      <div class="sec-title">Modüler Beden Sistemi</div>
+      <div class="sec-line"></div>
+      <button class="sec-toggle">▾ Daralt</button>
+    </div>
+    <div class="sec-body">
+      <div class="hl">
+        <strong>Temel İlke</strong>
+        Savaş sonrası düşman bedenlerinden parça sökülebilir. Bu parçalar takımın herhangi bir birimine takılabilir. Ancak her parça bir ısı maliyeti taşır ve Overload eşiğini değiştirir.
+      </div>
+
+      <div class="g2">
+        <div class="card">
+          <div class="card-title">Söküm Ekranı — Karar Mantığı</div>
+          <p>Savaş sonunda <strong>1–3 parça</strong> sunulur (elite/boss'tan daha fazla). Her parça şunları gösterir:</p>
+          <ul>
+            <li>Parça türü ve güç kaynağı uyumluluğu</li>
+            <li>Takılacak birimin mevcut ısı seviyesi</li>
+            <li>Bu parçanın ısı eşiğine etkisi (%)</li>
+            <li>Yetenek bonusu ve stat değişimi</li>
+            <li><strong>Uyumluluk göstergesi:</strong> Güç kaynağı uyuşmazlığı = ekstra ısı maliyeti</li>
+          </ul>
+        </div>
+        <div class="card danger">
+          <div class="card-title">Uyumluluk Matrisi</div>
+          <table>
+            <thead><tr><th>Parça</th><th>Takılan Birim</th><th>Sonuç</th></tr></thead>
+            <tbody>
+              <tr><td>Buhar parçası</td><td>Buhar birim</td><td>Tam uyum — standart ısı maliyeti</td></tr>
+              <tr><td>Elektrik parçası</td><td>Buhar birim</td><td>Kısmi uyum — +%20 ısı maliyeti</td></tr>
+              <tr><td>Ruh parçası</td><td>Elektrik birim</td><td>Çatışma — +%50 ısı maliyeti, SYN bozulması</td></tr>
+              <tr><td>Herhangi</td><td>AXIOM-Ø</td><td>Özel: AXIOM tam uyumlu ama maks. 2 yabancı parça</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Parça Kategorileri</div>
+        <div class="g3">
+          <div>
+            <p><strong>Güç Çekirdeği</strong></p>
+            <p>ATK artışı. Yüksek ısı maliyeti. Run-defining parça kategorisi.</p>
+          </div>
+          <div>
+            <p><strong>Hareket Modülü</strong></p>
+            <p>SPD ve pozisyon kontrolü. Orta ısı maliyeti.</p>
+          </div>
+          <div>
+            <p><strong>Zırh Plakası</strong></p>
+            <p>DEF ve HP artışı. Düşük ısı maliyeti — güvenli seçim.</p>
+          </div>
+          <div>
+            <p><strong>Soğutma Sistemi</strong></p>
+            <p>THRESH artışı — Overload eşiğini yükseltir. Çok değerli, nadir düşer.</p>
+          </div>
+          <div>
+            <p><strong>Protokol Çipi</strong></p>
+            <p>Pasif yetenek. Bazıları sinerji tetikler. Orta ısı maliyeti.</p>
+          </div>
+          <div>
+            <p><strong>Kenet Parçası</strong></p>
+            <p>Düşman parçaları — çok güçlü, çok riskli. Virüs bulaşma şansı taşır.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- 09 — TAKIM KURGUSU -->
+  <section id="team">
+    <div class="sec-header" onclick="toggle(this)">
+      <div class="sec-num">09</div>
+      <div class="sec-title">Takım Kurgusu & Sinerji</div>
+      <div class="sec-line"></div>
+      <button class="sec-toggle">▾ Daralt</button>
+    </div>
+    <div class="sec-body">
+      <div class="hl">
+        <strong>AXIOM-Ø ve Birlikler</strong>
+        AXIOM-Ø tek bilinçli varlıktır. Takımdaki diğer 4 birim onun direktifleriyle hareket eden, onarılmış ya da ele geçirilmiş otomaton kalıntılarıdır. Bu, oyuncuyu hem lider hem yalnız yapan anlatısal bir çerçevedir.
+      </div>
+
+      <div class="card">
+        <div class="card-title">Örnek Sinerji Kompozisyonları</div>
+        <table>
+          <thead><tr><th>Kompozisyon</th><th>Birimler</th><th>Strateji</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>Kazan Kalesi</strong></td>
+              <td>3× Buhar + Röle + Healer Protokol</td>
+              <td>Ortak ısı havuzu sayesinde Overload riski paylaşılır. Yavaş ama çok dayanıklı.</td>
+            </tr>
+            <tr>
+              <td><strong>Şimşek Sürüsü</strong></td>
+              <td>3× Elektrik + Zırh Buhar + Soğutma Modülü</td>
+              <td>Zincir şimşek alan hasarı. Buhar birimi ısı tamponu sağlar. Kırılgan ama yıkıcı.</td>
+            </tr>
+            <tr>
+              <td><strong>Yankı Korosu</strong></td>
+              <td>2× Ruh + Buhar + Elektrik + AXIOM</td>
+              <td>Kaotik sinerji: en yüksek tavan hasar ama kontrol zor. Ruh birimleri birbiri yeteneklerini kopyalayabilir.</td>
+            </tr>
+            <tr>
+              <td><strong>Termal Bomba</strong></td>
+              <td>2× Kritik Faz Elektrik + 3× Buhar Tampon</td>
+              <td>Elektrik birimleri kasıtlı olarak Overload'a sürüklenir. Buhar birimleri patlama hasarından korunur.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="g2">
+        <div class="card">
+          <div class="card-title">Sinerji Türleri</div>
+          <ul>
+            <li><strong>Güç Sinerjisi:</strong> Aynı güç kaynağından 2+ birim — ortak protokol bonusu</li>
+            <li><strong>Isı Sinerjisi:</strong> Soğutma + Yüksek ısı birimi — stratejik eşik yönetimi</li>
+            <li><strong>Modül Sinerjisi:</strong> Aynı modül tipinden birden fazla takıldığında combo tetiklenir</li>
+            <li><strong>Kenet Sinerjisi:</strong> Kenet parçası taşıyan birimler düşmana daha hızlı bulaşır</li>
+          </ul>
+        </div>
+        <div class="card danger">
+          <div class="card-title">Anti-Sinerji — Kasıtlı Tasarım</div>
+          <ul>
+            <li>3 Ruh birimi aynı anda: Bilinç Çöküşü riski — kontrol tamamen kaybolabilir</li>
+            <li>Ruh + Kenet parçası: En tehlikeli kombo — güçlü ama virüs yayılma şansı</li>
+            <li>Tüm Elektrik + Uyuşmaz parça: Küçük bir Overload diğerlerini zincir patlama riski</li>
+            <li>Savunma direktifi + Berserker birimi çakışması: Protokol hatası, random davranış</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- 10 — HARİTA -->
+  <section id="map">
+    <div class="sec-header" onclick="toggle(this)">
+      <div class="sec-num">10</div>
+      <div class="sec-title">Harita & Bölgeler</div>
+      <div class="sec-line"></div>
+      <button class="sec-toggle">▾ Daralt</button>
+    </div>
+    <div class="sec-body">
+      <div class="g2">
+        <div class="card">
+          <div class="card-title">Harita Yapısı</div>
+          <p>Dal yapılı, procedural üretilmiş harita. Her kavşakta iki yol — biri daha riskli, biri daha güvenli. Oda ikonları içeriği gösterir.</p>
+          <ul>
+            <li>Her bölge ~6–9 oda içerir</li>
+            <li>Bölge sonu: Kenet Komutanı Boss</li>
+            <li>Harita, güç kaynağına göre bölgesel bias gösterir (Buhar bölgesinde daha fazla Buhar odası)</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-title">Bölge Progression</div>
+          <table>
+            <tbody>
+              <tr><td><strong>B1 — Kazan Fab.</strong></td><td>Buhar ağırlıklı. Düşük–orta zorluk. 2. birim burada.</td></tr>
+              <tr><td><strong>B2 — Voltaj Arşiv</strong></td><td>Elektrik ağırlıklı. Hızlı, tehlikeli. 3. birim.</td></tr>
+              <tr><td><strong>B3 — Ruh Lab.</strong></td><td>Ruh ağırlıklı. En öngörülemez alan. 4. birim.</td></tr>
+              <tr><td><strong>B4 — Kenet Kalbi</strong></td><td>Karışık, maksimum zorluk. 5. birim.</td></tr>
+              <tr><td><strong>Ötesi (DLC)</strong></td><td>Prosedürel sonsuz mod — Ascension formatında</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- 11 — LOOT -->
+  <section id="loot">
+    <div class="sec-header" onclick="toggle(this)">
+      <div class="sec-num">11</div>
+      <div class="sec-title">Loot & Parça Sistemi</div>
+      <div class="sec-line"></div>
+      <button class="sec-toggle">▾ Daralt</button>
+    </div>
+    <div class="sec-body">
+      <div class="g2">
+        <div class="card">
+          <div class="card-title">Nadirlik & Isı Maliyeti İlişkisi</div>
+          <table>
+            <tbody>
+              <tr><td style="color:#aaa;">⬜ Common</td><td>Düşük ısı maliyeti, temel stat</td></tr>
+              <tr><td style="color:#4cae6e;">🟩 Uncommon</td><td>Orta ısı, küçük pasif yetenek</td></tr>
+              <tr><td style="color:var(--elec2);">🟦 Rare</td><td>Yüksek ısı, güçlü pasif veya sinerji</td></tr>
+              <tr><td style="color:var(--soul2);">🟪 Epic</td><td>Çok yüksek ısı, aktif yetenek dönüştürür</td></tr>
+              <tr><td style="color:var(--copper3);">🟡 Legendary</td><td>Run-defining — ama Overload eşiğini %40 düşürür</td></tr>
+              <tr><td style="color:var(--rust2);">🔴 Kenet</td><td>Eşsiz güç — virüs bulaşma riski taşır</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-title">Protokol Çipleri — Pasif Sistem</div>
+          <p>Doomfields'in Keepsake'ine karşılık: tüm takımı etkileyen protokol çipleri.</p>
+          <div class="g2" style="margin-top:10px;">
+            <div>
+              <p><strong>Termal Denge</strong><br><small>Tüm birimlerin ısı eşiği +10. Temel güvenlik protokolü.</small></p>
+            </div>
+            <div>
+              <p><strong>Sürü Hafızası</strong><br><small>Her devre dışı düşen birim +%5 ATK diğerlerine aktarır.</small></p>
+            </div>
+            <div>
+              <p><strong>Kaskad Devreleri</strong><br><small>Bir Overload patlaması zincir tepkime başlatır — kontrollü ise güçlü.</small></p>
+            </div>
+            <div>
+              <p><strong>Bilinç Ağı</strong><br><small>Ruh birimleri birbirinin SYN puanını paylaşır.</small></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- 12 — PVP -->
+  <section id="pvp">
+    <div class="sec-header" onclick="toggle(this)">
+      <div class="sec-num">12</div>
+      <div class="sec-title">Async PvP — Protokol Savaşları</div>
+      <div class="sec-line"></div>
+      <button class="sec-toggle">▾ Daralt</button>
+    </div>
+    <div class="sec-body">
+      <div class="card">
+        <div class="card-title">PvP Sistemi</div>
+        <p>Doomfields modelinden alınmış asenkron sistem. Oyuncular aktif olarak değil, <strong>kaydedilmiş AXIOM-Ø konfigürasyonuyla</strong> savaşır.</p>
+        <ol>
+          <li>Oyuncu en iyi run konfigürasyonunu "Protokol Arşivine" kaydeder</li>
+          <li>Diğer oyuncular bu arşivle savaşır — Ghost AI olarak çalışır</li>
+          <li>Sonuçlar Liderboard'a yazılır; ısı yönetimi puanı ayrıca ölçülür</li>
+          <li>Her iki tarafa da savaş sonucu raporlanır</li>
+        </ol>
+      </div>
+      <div class="g2">
+        <div class="card">
+          <div class="card-title">PvP Özel Katmanı — Isı Bahsi</div>
+          <p>PvP'ye özgü mekanik: Overload riskine bahse girebilirsin. Eşiğinin %80'inde savaşa girersen — kazanırsan ek puan, kaybedersen eksi puan. Yüksek risk, yüksek ödül.</p>
+        </div>
+        <div class="card danger">
+          <div class="card-title">Denge Notları</div>
+          <ul>
+            <li>Legendary parçalar PvP'de ek ısı maliyetiyle dengelenmeli</li>
+            <li>Kenet parçaları PvP'de devre dışı veya kısıtlı olabilir</li>
+            <li>Sezonluk meta rotasyonu zorunlu</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- 13 — META -->
+  <section id="meta">
+    <div class="sec-header" onclick="toggle(this)">
+      <div class="sec-num">13</div>
+      <div class="sec-title">Meta Progresyon</div>
+      <div class="sec-line"></div>
+      <button class="sec-toggle">▾ Daralt</button>
+    </div>
+    <div class="sec-body">
+      <div class="g2">
+        <div class="card">
+          <div class="card-title">Kalıcı İlerlemeler</div>
+          <ul>
+            <li><strong>Şema Kitabı:</strong> Keşfedilen her parça ve sınıf burada kayıt altına alınır</li>
+            <li><strong>AXIOM Günlükleri:</strong> Lore parçaları — dünya hikayesi günlük formatında açılır</li>
+            <li><strong>Konfigürasyon Kilitleri:</strong> Belirli sinerji kombinasyonlarını tamamlamak yeni başlangıç seçenekleri açar</li>
+            <li><strong>Patlama Arşivi:</strong> Her Overload kaydedilir — hangi parça ne zaman patlattı analizi</li>
+            <li><strong>Ascension Protokolü:</strong> Her başarılı run sonrası zorluk katmanı seçimi</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-title">Ascension Sistemi</div>
+          <ul>
+            <li>Her seviyede yeni bir kısıt eklenir (ör: "Başlangıç ısı eşiği –15")</li>
+            <li>Daha nadir parça drop oranları</li>
+            <li>Boss'lara yeni Kenet mekanik katmanları eklenir</li>
+            <li>Üst seviyelerde: "Gerçek Son" — Kenet'in kökeni açıklanır</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- 14 — SANAT -->
+  <section id="art">
+    <div class="sec-header" onclick="toggle(this)">
+      <div class="sec-num">14</div>
+      <div class="sec-title">Sanat Yönü & Atmosfer</div>
+      <div class="sec-line"></div>
+      <button class="sec-toggle">▾ Daralt</button>
+    </div>
+    <div class="sec-body">
+      <div class="g2">
+        <div class="card">
+          <div class="card-title">Görsel Dil</div>
+          <ul>
+            <li><strong>Pixel Art:</strong> Yüksek kontrast, siyah zemin üzerine metal parlamaları</li>
+            <li><strong>Renk kodlaması:</strong> Buhar = amber/turuncu, Elektrik = soğuk mavi, Ruh = derin mor</li>
+            <li><strong>Kenet rengi:</strong> Kırmızı-turuncu bozulma — her enfekte birimde gözlerin kızarması</li>
+            <li><strong>Arka plan:</strong> Çökmüş fabrika, paslanmış demir dokular, aktif buharlı borular</li>
+            <li><strong>Animasyon:</strong> Ağır, mekanik, her hareket amaçlı — dans değil emek</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-title">Atmosfer Referansları</div>
+          <div class="g2" style="margin-top:8px;">
+            <div>
+              <p><strong>Karakter Tasarımı</strong></p>
+              <p>Darkest Dungeon siluet gücü + Transistor mekanik detayı</p>
+            </div>
+            <div>
+              <p><strong>Ortam</strong></p>
+              <p>Dead Cells endüstriyel bölgeleri + Hollow Knight sessiz trajedi</p>
+            </div>
+            <div>
+              <p><strong>Efektler</strong></p>
+              <p>Into the Breach mekanik netliği + Hades yetenek görselliği</p>
+            </div>
+            <div>
+              <p><strong>UI Tonu</strong></p>
+              <p>SOMA'nın klinik soğukluğu + Slay the Spire'ın okunabilirliği</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card steam">
+        <div class="card-title">Overload Görsel Dili</div>
+        <p>Isı seviyesi arttıkça birim görselinde değişim olmalı — soyutlama değil, somut görsel geribildirim:</p>
+        <ul>
+          <li><strong>Güvenli (0–40%):</strong> Normal — mavi/yeşil göz ışıkları</li>
+          <li><strong>Uyarı (40–70%):</strong> Eklemlerden küçük buhar — turuncu göz tonu</li>
+          <li><strong>Kritik (70–90%):</strong> Gövde yanıyor, kıvılcımlar — kırmızı göz, titreşim animasyonu</li>
+          <li><strong>Patlama:</strong> Parlama efekti, alan şok dalgası animasyonu, yavaş çekim</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- 15 — SES -->
+  <section id="audio">
+    <div class="sec-header" onclick="toggle(this)">
+      <div class="sec-num">15</div>
+      <div class="sec-title">Ses Tasarımı</div>
+      <div class="sec-line"></div>
+      <button class="sec-toggle">▾ Daralt</button>
+    </div>
+    <div class="sec-body">
+      <div class="g2">
+        <div class="card">
+          <div class="card-title">Müzik Yönü</div>
+          <ul>
+            <li><strong>Ambient:</strong> Harita geziminde — derin endüstriyel drone, uzak çekiç sesleri, tik-tak ritmi</li>
+            <li><strong>Savaş:</strong> Dinamik — düşman sayısı arttıkça tempo yükselir, metalik perküsyon ağırlıklı</li>
+            <li><strong>Overload Kritik:</strong> Müziğe bozulma efekti — asimetrik ritim, gerilim</li>
+            <li><strong>Boss:</strong> Orkestral endüstriyel — ağır, kaçınılmaz his</li>
+            <li><strong>Zafer / Ölüm:</strong> Minimalist — bir tik sesi, sonra sessizlik</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-title">SFX Tasarımı</div>
+          <ul>
+            <li><strong>Buhar saldırısı:</strong> Piston itme sesi, buhar boşalması</li>
+            <li><strong>Elektrik saldırısı:</strong> Statik, kısa spark, rezonans yankısı</li>
+            <li><strong>Ruh saldırısı:</strong> İşlenmiş ses, gerçekdışı — metalin "inlemesi"</li>
+            <li><strong>Parça söküm:</strong> Cıvata dönmesi + mekanik klik = tatmin sesi</li>
+            <li><strong>Overload uyarısı:</strong> Yavaşlayan saat + artan ısıltı tonu</li>
+            <li><strong>Patlama:</strong> Derin boom + metal parçalanma + sessizlik</li>
+            <li><strong>Kenet bulaşması:</strong> Bozuk radyo frekansı + ıslık</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- 16 — TEKNİK & ROADMAP -->
+  <section id="tech">
+    <div class="sec-header" onclick="toggle(this)">
+      <div class="sec-num">16</div>
+      <div class="sec-title">Teknik Spec & Roadmap</div>
+      <div class="sec-line"></div>
+      <button class="sec-toggle">▾ Daralt</button>
+    </div>
+    <div class="sec-body">
+      <div class="g2">
+        <div class="card">
+          <div class="card-title">Teknik Gereksinimler (Hedef)</div>
+          <table>
+            <tbody>
+              <tr><td><strong>OS</strong></td><td>Windows 10 64-bit</td></tr>
+              <tr><td><strong>CPU</strong></td><td>x64 + SSE2</td></tr>
+              <tr><td><strong>RAM</strong></td><td>2 GB</td></tr>
+              <tr><td><strong>GPU</strong></td><td>DX11 destekli</td></tr>
+              <tr><td><strong>Depolama</strong></td><td>~3 GB</td></tr>
+              <tr><td><strong>Motor</strong></td><td>Unity 2022 LTS (64-bit)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-title">Teknik Özellikler</div>
+          <table>
+            <tbody>
+              <tr><td><strong>Kaydetme</strong></td><td>Steam Cloud Kaydetme</td></tr>
+              <tr><td><strong>PvP</strong></td><td>Steam altyapısı üzerinden Async</td></tr>
+              <tr><td><strong>Dil</strong></td><td>İngilizce (launch), TR/DE/ZH (sonra)</td></tr>
+              <tr><td><strong>Achievement</strong></td><td>Hedef: 60+ Steam Achievement</td></tr>
+              <tr><td><strong>Modding</strong></td><td>Uzun vadede Steam Workshop desteği</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card danger">
+        <div class="card-title">Tasarım Riskleri & Çözümler</div>
+        <table>
+          <thead><tr><th>Risk</th><th>Çözüm</th><th>Öncelik</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Overload sistemi çok karmaşık hissettirirse</td>
+              <td>İlk 3 koşuda Isı eşiği çok yüksek tutulur — öğrenmek için alan açılır</td>
+              <td><span class="tag hi">YÜKSEK</span></td>
+            </tr>
+            <tr>
+              <td>Modüler Beden UI okuma zorluğu</td>
+              <td>Söküm ekranında ısı etkisi bar grafiğiyle gösterilir, metin değil</td>
+              <td><span class="tag hi">YÜKSEK</span></td>
+            </tr>
+            <tr>
+              <td>Kenet parçası dengesi (çok güçlü)</td>
+              <td>Virüs bulaşma şansı ile güç orantılı — risk gerçek olmalı</td>
+              <td><span class="tag hi">YÜKSEK</span></td>
+            </tr>
+            <tr>
+              <td>Ruh tipi öngörülemezliği frustrasyon yaratabilir</td>
+              <td>Bilinç Skoru göstergesi ile tahmin edilebilirlik kazandırılır</td>
+              <td><span class="tag mid">ORTA</span></td>
+            </tr>
+            <tr>
+              <td>PvP Ghost AI fidelity sorunu</td>
+              <td>Direktif + parça kaydı ile davranış simülasyonu — titiz test</td>
+              <td><span class="tag mid">ORTA</span></td>
+            </tr>
+            <tr>
+              <td>Replayability run 30+ sonrası</td>
+              <td>Ascension modu + sezonluk Kenet varyantları + yeni bölge DLC</td>
+              <td><span class="tag lo">DÜŞÜK</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Geliştirme Roadmap</div>
+        <table>
+          <thead><tr><th>Aşama</th><th>İçerik</th><th>Durum</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>Pre-Production</strong></td>
+              <td>GDD tamamlama, prototip core loop, sanat tarzı kararı</td>
+              <td><span class="tag hi">ŞİMDİ</span></td>
+            </tr>
+            <tr>
+              <td><strong>Alpha (6 ay)</strong></td>
+              <td>B1 bölgesi tam, Overload sistemi, Modüler Beden UI, 3 güç kaynağı</td>
+              <td><span class="tag mid">SONRA</span></td>
+            </tr>
+            <tr>
+              <td><strong>Beta (3 ay)</strong></td>
+              <td>B2–B3 bölgeleri, tüm 27 konfigürasyon, Async PvP MVP</td>
+              <td><span class="tag lo">PLANLANDI</span></td>
+            </tr>
+            <tr>
+              <td><strong>Early Access</strong></td>
+              <td>B1–B3, tam sistem, Steam'de yayın — topluluk geri bildirimi</td>
+              <td><span class="tag lo">PLANLANDI</span></td>
+            </tr>
+            <tr>
+              <td><strong>v1.0 Launch</strong></td>
+              <td>B4 (Kenet Kalbi), tam anlatı, Ascension modu, tüm achievements</td>
+              <td><span class="tag lo">PLANLANDI</span></td>
+            </tr>
+            <tr>
+              <td><strong>Post-Launch</strong></td>
+              <td>Sezonluk içerik, 4. güç kaynağı araştırması, Steam Workshop</td>
+              <td><span class="tag lo">ARAŞTIRMA</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <div class="divider"></div>
+  <div style="text-align:center;padding:36px 0;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:3px;color:var(--text4);line-height:2;">
+    CLOCKWORK REQUIEM — GAME DESIGN DOCUMENT v0.1<br>
+    PRE-PRODUCTION — MART 2026<br>
+    <span style="color:var(--border2);">// Bu doküman referans ve tasarım amaçlı hazırlanmıştır. Tüm mekanikler prototipleme aşamasında değişebilir. //</span>
+  </div>
+
+</main>
+
+<script>
+  // Section toggle
+  function toggle(header) {
+    const body = header.nextElementSibling;
+    const btn = header.querySelector('.sec-toggle');
+    body.classList.toggle('collapsed');
+    btn.textContent = body.classList.contains('collapsed') ? '▸ Genişlet' : '▾ Daralt';
+  }
+
+  // Set max-heights for animation
+  document.querySelectorAll('.sec-body').forEach(el => {
+    el.style.maxHeight = el.scrollHeight + 400 + 'px';
+  });
+
+  // Active nav on scroll
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('#sidenav a');
+
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(l => l.classList.remove('active'));
+        const a = document.querySelector(`#sidenav a[href="#${e.target.id}"]`);
+        if (a) a.classList.add('active');
+      }
+    });
+  }, { threshold: 0.25 });
+
+  sections.forEach(s => io.observe(s));
+
+  // Animate stat bars
+  setTimeout(() => {
+    document.querySelectorAll('.stat-fill').forEach(b => {
+      const w = b.style.width;
+      b.style.width = '0';
+      setTimeout(() => b.style.width = w, 80);
+    });
+  }, 300);
+</script>
+</body>
+</html>
