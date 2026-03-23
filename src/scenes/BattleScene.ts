@@ -9,6 +9,8 @@ import { metaState } from '@/state/MetaStateManager';
 import { SaveManager } from '@/utils/SaveManager';
 import { AudioManager } from '@/systems/AudioManager';
 import { fadeIn } from '@/ui/SceneTransition';
+import { powerColor, FONT } from '@/ui/UIKit';
+import { isMobile } from '@/utils/Mobile';
 import type { RoomType, UnitConfig } from '@/types';
 
 function deepCloneUnits(units: UnitConfig[]): UnitConfig[] {
@@ -55,79 +57,102 @@ export class BattleScene extends Phaser.Scene {
     this.result = BattleManager.simulate(simAllies, simEnemies, this.roomType);
 
     // ── UI Layout ──
+    const mob = isMobile();
     const label = this.roomType === 'boss' ? 'BOSS ENCOUNTER' :
                   this.roomType === 'elite' ? 'ELITE COMBAT' : 'COMBAT';
+    const labelColor = this.roomType === 'boss' ? COLORS.meltdown : this.roomType === 'elite' ? COLORS.copper3 : COLORS.rust2;
 
-    this.add.text(GAME_WIDTH / 2, 16, `// ${label} //`, {
-      fontFamily: 'monospace', fontSize: '10px', color: '#c0432e', letterSpacing: 3,
+    // Header bar
+    this.add.rectangle(GAME_WIDTH / 2, 0, GAME_WIDTH, 50, labelColor, 0.06).setOrigin(0.5, 0);
+    this.add.text(GAME_WIDTH / 2, 14, label, {
+      fontFamily: 'monospace', fontSize: mob ? '10px' : '12px',
+      color: '#' + labelColor.toString(16).padStart(6, '0'), letterSpacing: 4,
     }).setOrigin(0.5);
 
     // Synergy display
     const synergies = SynergyEngine.evaluate(realAllies);
     if (synergies.length > 0) {
-      this.add.text(GAME_WIDTH / 2, 36, synergies.map(s => s.description).join(' | '), {
-        fontFamily: 'monospace', fontSize: '8px', color: '#4cae6e', letterSpacing: 1,
+      this.add.text(GAME_WIDTH / 2, 32, synergies.map(s => s.type.replace(/_/g, ' ').toUpperCase()).join(' + '), {
+        fontFamily: 'monospace', fontSize: '7px', color: '#4cae6e', letterSpacing: 2,
       }).setOrigin(0.5);
     }
 
     const warnings = SynergyEngine.checkAntiSynergies(realAllies);
     if (warnings.length > 0) {
-      this.add.text(GAME_WIDTH / 2, 48, warnings[0], {
-        fontFamily: 'monospace', fontSize: '8px', color: '#c0432e', letterSpacing: 1,
+      this.add.text(GAME_WIDTH / 2, 42, warnings[0].substring(0, 60), {
+        fontFamily: 'monospace', fontSize: '7px', color: '#c0432e', letterSpacing: 1,
       }).setOrigin(0.5);
     }
 
-    // ── ALLY SIDE ──
-    this.add.text(40, 65, 'AXIOM SQUAD', {
-      fontFamily: 'monospace', fontSize: '9px', color: '#7a6e5a', letterSpacing: 2,
+    // ── ALLY PANEL (left) ──
+    const panelW = mob ? GAME_WIDTH / 2 - 10 : 320;
+    this.add.rectangle(panelW / 2 + 8, 55, panelW, 2, COLORS.safe, 0.4).setOrigin(0.5, 0);
+    this.add.text(14, 58, 'AXIOM SQUAD', {
+      fontFamily: 'monospace', fontSize: '8px', color: '#4cae6e', letterSpacing: 3,
     });
 
-    let py = 90;
+    let py = 78;
     for (const unit of realAllies) {
-      const color = unit.isAxiom ? '#f0a84a' : '#b8a888';
-      const nameText = this.add.text(40, py, `${unit.name} Lv.${unit.level}`, {
-        fontFamily: 'monospace', fontSize: '11px', color,
+      const pc = powerColor(unit.powerSource);
+      const pcStr = '#' + pc.toString(16).padStart(6, '0');
+
+      // Name with power source dot
+      this.add.rectangle(14, py + 4, 6, 6, pc);
+      const nameText = this.add.text(24, py, `${unit.name} Lv.${unit.level}`, {
+        fontFamily: 'monospace', fontSize: mob ? '9px' : '10px',
+        color: unit.isAxiom ? '#f0a84a' : '#b8a888',
       });
 
-      this.add.text(40, py + 16, 'HP', { fontFamily: 'monospace', fontSize: '7px', color: '#7a6e5a' });
-      this.add.rectangle(60, py + 19, 120, 4, COLORS.border).setOrigin(0, 0.5);
-      const hpBar = this.add.rectangle(60, py + 19, 120, 4, COLORS.safe).setOrigin(0, 0.5);
+      // HP bar
+      const barW = mob ? 100 : 130;
+      this.add.rectangle(24, py + 17, barW, 4, COLORS.border).setOrigin(0, 0.5);
+      const hpBar = this.add.rectangle(24, py + 17, barW, 4, COLORS.safe).setOrigin(0, 0.5);
 
-      this.add.text(200, py + 16, 'HEAT', { fontFamily: 'monospace', fontSize: '7px', color: '#7a6e5a' });
-      this.add.rectangle(230, py + 19, 80, 4, COLORS.border).setOrigin(0, 0.5);
-      const heatBar = this.add.rectangle(230, py + 19, 0, 4, COLORS.copper).setOrigin(0, 0.5);
+      // Heat bar
+      const heatX = 24 + barW + 10;
+      const heatW = mob ? 60 : 80;
+      this.add.rectangle(heatX, py + 17, heatW, 4, COLORS.border).setOrigin(0, 0.5);
+      const heatBar = this.add.rectangle(heatX, py + 17, 0, 4, COLORS.copper).setOrigin(0, 0.5);
 
       this.allyCards.set(unit.id, { hpBar, heatBar, nameText });
-      py += 44;
+      py += mob ? 36 : 40;
     }
 
-    // ── ENEMY SIDE ──
-    this.add.text(GAME_WIDTH - 40, 65, 'KENET FORCES', {
-      fontFamily: 'monospace', fontSize: '9px', color: '#c0432e', letterSpacing: 2,
+    // ── ENEMY PANEL (right) ──
+    const enemyX = GAME_WIDTH - 14;
+    this.add.rectangle(GAME_WIDTH - panelW / 2 - 8, 55, panelW, 2, COLORS.rust2, 0.4).setOrigin(0.5, 0);
+    this.add.text(enemyX, 58, 'KENET FORCES', {
+      fontFamily: 'monospace', fontSize: '8px', color: '#c0432e', letterSpacing: 3,
     }).setOrigin(1, 0);
 
-    let ey = 90;
+    let ey = 78;
     for (const enemy of this.enemies) {
-      const nameText = this.add.text(GAME_WIDTH - 40, ey, enemy.name, {
-        fontFamily: 'monospace', fontSize: '11px', color: '#c0432e',
+      // Red dot
+      this.add.rectangle(enemyX - 6, ey + 4, 6, 6, COLORS.rust2);
+      const nameText = this.add.text(enemyX - 12, ey, enemy.name, {
+        fontFamily: 'monospace', fontSize: mob ? '9px' : '10px', color: '#c0432e',
       }).setOrigin(1, 0);
 
-      this.add.rectangle(GAME_WIDTH - 40, ey + 19, 160, 4, COLORS.border).setOrigin(1, 0.5);
-      const hpBar = this.add.rectangle(GAME_WIDTH - 40, ey + 19, 160, 4, COLORS.rust2).setOrigin(1, 0.5);
+      const barW = mob ? 120 : 160;
+      this.add.rectangle(enemyX, ey + 17, barW, 4, COLORS.border).setOrigin(1, 0.5);
+      const hpBar = this.add.rectangle(enemyX, ey + 17, barW, 4, COLORS.rust2).setOrigin(1, 0.5);
 
       this.enemyCards.set(enemy.id, { hpBar, nameText });
-      ey += 44;
+      ey += mob ? 36 : 40;
     }
 
     // ── Battle Log ──
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT - 130, GAME_WIDTH - 80, 200, COLORS.surface, 0.8)
+    const logH = mob ? 160 : 200;
+    const logY = GAME_HEIGHT - logH / 2 - 16;
+    this.add.rectangle(GAME_WIDTH / 2, logY, GAME_WIDTH - 40, logH, COLORS.surface, 0.9)
       .setStrokeStyle(1, COLORS.border);
-    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 225, '// BATTLE LOG //', {
-      fontFamily: 'monospace', fontSize: '8px', color: '#7a6e5a', letterSpacing: 2,
+    this.add.rectangle(GAME_WIDTH / 2, logY - logH / 2, GAME_WIDTH - 40, 2, COLORS.copper, 0.3).setOrigin(0.5, 0);
+    this.add.text(GAME_WIDTH / 2, logY - logH / 2 + 6, 'BATTLE LOG', {
+      fontFamily: 'monospace', fontSize: '7px', color: '#7a6e5a', letterSpacing: 3,
     }).setOrigin(0.5);
-    this.logText = this.add.text(60, GAME_HEIGHT - 210, '', {
-      fontFamily: 'monospace', fontSize: '9px', color: '#b8a888',
-      lineSpacing: 3, wordWrap: { width: GAME_WIDTH - 120 },
+    this.logText = this.add.text(40, logY - logH / 2 + 20, '', {
+      fontFamily: 'monospace', fontSize: mob ? '8px' : '9px', color: '#b8a888',
+      lineSpacing: 3, wordWrap: { width: GAME_WIDTH - 80 },
     });
 
     this.playTurns();
@@ -162,15 +187,20 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private updateBarsFromSnapshots(allySnaps: UnitSnapshot[], enemySnaps: UnitSnapshot[]): void {
+    const mob = isMobile();
+    const allyBarW = mob ? 100 : 130;
+    const allyHeatW = mob ? 60 : 80;
+    const enemyBarW = mob ? 120 : 160;
+
     for (const snap of allySnaps) {
       const card = this.allyCards.get(snap.id);
       if (!card) continue;
       const hpPct = Math.max(0, snap.hp / snap.maxHp);
-      card.hpBar.width = 120 * hpPct;
+      card.hpBar.width = allyBarW * hpPct;
       card.hpBar.fillColor = snap.alive ? COLORS.safe : COLORS.rust2;
 
       const heatPct = snap.thresh > 0 ? snap.heat / snap.thresh : 0;
-      card.heatBar.width = 80 * heatPct;
+      card.heatBar.width = allyHeatW * heatPct;
       card.heatBar.fillColor = heatPct > 0.9 ? COLORS.meltdown : heatPct > 0.7 ? COLORS.rust2 : heatPct > 0.4 ? COLORS.warning : COLORS.copper;
 
       if (!snap.alive) {
@@ -180,7 +210,7 @@ export class BattleScene extends Phaser.Scene {
     for (const snap of enemySnaps) {
       const card = this.enemyCards.get(snap.id);
       if (!card) continue;
-      card.hpBar.width = 160 * Math.max(0, snap.hp / snap.maxHp);
+      card.hpBar.width = enemyBarW * Math.max(0, snap.hp / snap.maxHp);
       if (!snap.alive) card.nameText.setColor('#4a4236');
     }
   }

@@ -4,7 +4,9 @@ import { SaveManager } from '@/utils/SaveManager';
 import { runState } from '@/state/RunStateManager';
 import { metaState } from '@/state/MetaStateManager';
 import { AudioManager } from '@/systems/AudioManager';
-import { isMobile, fontSize } from '@/utils/Mobile';
+import { isMobile } from '@/utils/Mobile';
+import { createButton, drawDivider, FONT } from '@/ui/UIKit';
+import { fadeIn } from '@/ui/SceneTransition';
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -14,88 +16,103 @@ export class MenuScene extends Phaser.Scene {
   create(): void {
     SaveManager.loadAll();
     AudioManager.setMode('menu');
+    fadeIn(this, 500);
 
     const cx = GAME_WIDTH / 2;
-
-    // Title
     const mob = isMobile();
-    const titleSize = mob ? '32px' : '48px';
-    const titleY1 = mob ? 120 : 140;
-    const titleY2 = mob ? 165 : 200;
 
-    this.add.text(cx, titleY1, 'CLOCKWORK', {
-      fontFamily: 'monospace', fontSize: titleSize, color: '#f0a84a', letterSpacing: mob ? 4 : 8,
+    // ── Background decoration ──
+    // Gear decorations
+    if (this.textures.exists('gear_deco')) {
+      this.add.image(120, 150, 'gear_deco').setAlpha(0.06).setScale(2);
+      this.add.image(GAME_WIDTH - 120, GAME_HEIGHT - 150, 'gear_deco').setAlpha(0.04).setScale(3);
+      this.add.image(GAME_WIDTH - 80, 100, 'gear_deco').setAlpha(0.03).setScale(1.5).setAngle(45);
+    }
+
+    // Subtle gradient overlay at top
+    const topGrad = this.add.rectangle(cx, 0, GAME_WIDTH, 200, COLORS.copper, 0.02).setOrigin(0.5, 0);
+
+    // ── Title ──
+    const titleSize = mob ? '30px' : '44px';
+    const titleY = mob ? 100 : 130;
+
+    const title1 = this.add.text(cx, titleY, 'CLOCKWORK', {
+      fontFamily: 'monospace', fontSize: titleSize, color: '#f0a84a', letterSpacing: mob ? 4 : 10,
     }).setOrigin(0.5);
 
-    this.add.text(cx, titleY2, 'REQUIEM', {
-      fontFamily: 'monospace', fontSize: titleSize, color: '#f0a84a', letterSpacing: mob ? 4 : 8,
+    const title2 = this.add.text(cx, titleY + (mob ? 40 : 55), 'REQUIEM', {
+      fontFamily: 'monospace', fontSize: titleSize, color: '#f0a84a', letterSpacing: mob ? 4 : 10,
     }).setOrigin(0.5);
 
-    this.add.text(cx, titleY2 + 40, 'ROGUELITE  AUTOBATTLER', {
-      fontFamily: 'monospace', fontSize: fontSize(10), color: '#7a6e5a', letterSpacing: mob ? 2 : 5,
+    // Title glow animation
+    this.tweens.add({
+      targets: [title1, title2],
+      alpha: { from: 0.85, to: 1 },
+      duration: 2000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+
+    // Subtitle
+    const subY = titleY + (mob ? 80 : 115);
+    this.add.text(cx, subY, 'ROGUELITE  AUTOBATTLER', {
+      fontFamily: 'monospace', fontSize: mob ? '8px' : '10px',
+      color: '#7a6e5a', letterSpacing: mob ? 3 : 6,
     }).setOrigin(0.5);
 
-    // Menu buttons
+    // Divider
+    drawDivider(this, subY + 20, mob ? GAME_WIDTH - 40 : 400);
+
+    // ── Menu buttons ──
     const hasRun = runState.get().active;
-    const meta = metaState.get();
+    const btnStartY = subY + (mob ? 50 : 55);
+    const btnGap = mob ? 48 : 44;
 
-    const buttonDefs = [
-      { label: 'NEW RUN', callback: () => this.scene.start('RunStart') },
-      { label: 'CONTINUE', callback: () => this.continueRun(), enabled: hasRun },
-      { label: 'PROTOCOL WARS', callback: () => this.scene.start('PvpMenu') },
-      { label: 'SCHEMA BOOK', callback: () => this.scene.start('SchemaBook') },
-      { label: 'ARCHIVES', callback: () => this.scene.start('Archive') },
+    const buttons = [
+      { label: 'NEW RUN',        cb: () => this.scene.start('RunStart'),   color: COLORS.safe },
+      { label: 'CONTINUE',       cb: () => this.continueRun(),             color: COLORS.copper3, disabled: !hasRun },
+      { label: 'PROTOCOL WARS',  cb: () => this.scene.start('PvpMenu'),    color: COLORS.rust2 },
+      { label: 'SCHEMA BOOK',    cb: () => this.scene.start('SchemaBook'), color: COLORS.elec2 },
+      { label: 'ARCHIVES',       cb: () => this.scene.start('Archive'),    color: COLORS.soul2 },
     ];
 
-    let y = mob ? 260 : 300;
-    const btnFontSize = mob ? '16px' : '14px';
-    const btnSpacing = mob ? 48 : 44;
-    for (const def of buttonDefs) {
-      const enabled = def.enabled !== false;
-      const btn = this.add.text(cx, y, def.label, {
-        fontFamily: 'monospace', fontSize: btnFontSize,
-        color: enabled ? '#e0d4bc' : '#4a4236',
-        letterSpacing: mob ? 2 : 4, padding: { x: 24, y: 12 },
-      }).setOrigin(0.5);
+    buttons.forEach((def, i) => {
+      createButton(this, cx, btnStartY + i * btnGap, def.label, def.cb, {
+        color: def.color,
+        width: mob ? GAME_WIDTH - 60 : 260,
+        disabled: def.disabled,
+      });
+    });
 
-      if (enabled) {
-        btn.setInteractive({ useHandCursor: true })
-          .on('pointerover', () => { btn.setColor('#f0a84a'); AudioManager.playTick(0.03); })
-          .on('pointerout', () => btn.setColor('#e0d4bc'))
-          .on('pointerdown', def.callback);
-      }
-
-      y += btnSpacing;
-    }
-
-    // Meta summary at bottom
+    // ── Meta summary ──
+    const meta = metaState.get();
     if (meta.totalRuns > 0) {
-      this.add.text(cx, GAME_HEIGHT - 80,
-        `RUNS: ${meta.totalRuns}  WINS: ${meta.totalWins}  ASCENSION: ${meta.ascensionLevel}`, {
-        fontFamily: 'monospace', fontSize: '8px', color: '#4a4236', letterSpacing: 2,
+      const metaY = GAME_HEIGHT - (mob ? 70 : 80);
+      drawDivider(this, metaY - 12, mob ? GAME_WIDTH - 40 : 400);
+      this.add.text(cx, metaY, `RUNS ${meta.totalRuns}  |  WINS ${meta.totalWins}  |  ASC ${meta.ascensionLevel}  |  PARTS ${meta.schemaBook.length}`, {
+        fontFamily: 'monospace', fontSize: mob ? '7px' : '8px', color: '#4a4236', letterSpacing: 1,
       }).setOrigin(0.5);
     }
 
-    // Volume control
-    this.add.text(GAME_WIDTH - 20, 20, '[ SOUND ]', {
-      fontFamily: 'monospace', fontSize: '9px', color: '#7a6e5a', letterSpacing: 1,
-    }).setOrigin(1, 0)
-      .setInteractive({ useHandCursor: true })
+    // ── Sound toggle ──
+    const soundBtn = this.add.text(GAME_WIDTH - 16, 16, 'SND', {
+      fontFamily: 'monospace', fontSize: '9px', color: '#7a6e5a',
+      backgroundColor: '#1a1815', padding: { x: 6, y: 4 },
+    }).setOrigin(1, 0).setInteractive({ useHandCursor: true })
       .on('pointerdown', function(this: Phaser.GameObjects.Text) {
         const muted = AudioManager.toggleMute();
-        this.setText(muted ? '[ MUTED ]' : '[ SOUND ]');
+        this.setColor(muted ? '#4a4236' : '#7a6e5a');
       });
 
-    // Tagline
-    this.add.text(cx, GAME_HEIGHT - 40, '"Guclu bir parca sokmek seni daha tehlikeli yapar. Ama saat her zaman bir bedel ister."', {
-      fontFamily: 'serif', fontSize: '12px', color: '#7a6e5a',
-      fontStyle: 'italic', align: 'center',
+    // ── Tagline ──
+    this.add.text(cx, GAME_HEIGHT - 28, '"The clock always demands a price."', {
+      fontFamily: 'serif', fontSize: mob ? '10px' : '12px', color: '#4a4236',
+      fontStyle: 'italic',
     }).setOrigin(0.5);
   }
 
   private continueRun(): void {
-    if (runState.get().active) {
-      this.scene.start('Map');
-    }
+    if (runState.get().active) this.scene.start('Map');
   }
 }

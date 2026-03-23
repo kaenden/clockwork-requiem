@@ -4,7 +4,32 @@ import { runState } from '@/state/RunStateManager';
 import { MapGenerator } from '@/systems/MapGenerator';
 import { AudioManager } from '@/systems/AudioManager';
 import { fadeIn } from '@/ui/SceneTransition';
+import { createButton, drawHeatMeter, FONT, powerColor } from '@/ui/UIKit';
+import { isMobile } from '@/utils/Mobile';
 import type { MapNode } from '@/types';
+
+const ZONE_NAMES: Record<string, string> = {
+  boiler_works: 'BOILER WORKS',
+  voltage_archives: 'VOLTAGE ARCHIVES',
+  soul_labs: 'SOUL LABORATORIES',
+  kenet_heart: 'KENET HEART',
+};
+
+const ZONE_COLORS: Record<string, number> = {
+  boiler_works: COLORS.steam2,
+  voltage_archives: COLORS.elec2,
+  soul_labs: COLORS.soul2,
+  kenet_heart: COLORS.meltdown,
+};
+
+const ROOM_ICONS: Record<string, { symbol: string; color: number }> = {
+  battle:   { symbol: '\u2694', color: COLORS.rust2 },
+  repair:   { symbol: '+',      color: COLORS.safe },
+  terminal: { symbol: '>_',     color: COLORS.elec2 },
+  elite:    { symbol: '!',      color: COLORS.copper3 },
+  boss:     { symbol: '\u2620', color: COLORS.meltdown },
+  market:   { symbol: '$',      color: COLORS.soul2 },
+};
 
 export class MapScene extends Phaser.Scene {
   private nodeSprites: Map<string, Phaser.GameObjects.Container> = new Map();
@@ -17,110 +42,143 @@ export class MapScene extends Phaser.Scene {
     AudioManager.setMode('map');
     fadeIn(this);
     this.nodeSprites.clear();
+    const mob = isMobile();
     const state = runState.get();
 
-    // Generate map if empty
     if (state.map.length === 0) {
       const map = MapGenerator.generate(state.zone, state.zoneIndex);
       runState.setMap(map);
     }
 
-    // Zone title
-    const zoneNames: Record<string, string> = {
-      boiler_works: 'BOILER WORKS',
-      voltage_archives: 'VOLTAGE ARCHIVES',
-      soul_labs: 'SOUL LABORATORIES',
-      kenet_heart: 'KENET HEART',
-    };
+    const zoneColor = ZONE_COLORS[state.zone] ?? COLORS.copper;
+    const zoneColorStr = '#' + zoneColor.toString(16).padStart(6, '0');
 
-    this.add.text(GAME_WIDTH / 2, 30, zoneNames[state.zone] ?? state.zone, {
-      fontFamily: 'monospace',
-      fontSize: '14px',
-      color: '#f0a84a',
-      letterSpacing: 4,
+    // ── Zone header ──
+    this.add.text(GAME_WIDTH / 2, 18, ZONE_NAMES[state.zone] ?? state.zone, {
+      fontFamily: 'monospace', fontSize: mob ? '12px' : '14px',
+      color: zoneColorStr, letterSpacing: 4,
     }).setOrigin(0.5);
 
-    this.add.text(GAME_WIDTH / 2, 52, `FLOOR ${state.floor} — ASCENSION ${state.ascension}`, {
-      fontFamily: 'monospace',
-      fontSize: '9px',
-      color: '#7a6e5a',
-      letterSpacing: 2,
+    this.add.text(GAME_WIDTH / 2, 38, `FLOOR ${state.floor}  |  ASCENSION ${state.ascension}`, {
+      fontFamily: 'monospace', fontSize: '8px', color: '#7a6e5a', letterSpacing: 2,
     }).setOrigin(0.5);
 
-    // Draw map
-    this.drawMap(runState.get().map);
+    // Zone accent line
+    this.add.rectangle(GAME_WIDTH / 2, 52, mob ? GAME_WIDTH - 40 : 500, 1, zoneColor, 0.3);
 
-    // Team button
-    this.add.text(GAME_WIDTH - 20, GAME_HEIGHT - 30, '[ TEAM ]', {
-      fontFamily: 'monospace',
-      fontSize: '11px',
-      color: '#b8a888',
-      letterSpacing: 2,
-    }).setOrigin(1, 0.5)
-      .setInteractive({ useHandCursor: true })
-      .on('pointerdown', () => this.scene.start('Team'));
+    // ── Team summary (top-right) ──
+    const units = state.units.filter(u => u.alive);
+    let hx = GAME_WIDTH - 20;
+    for (let i = units.length - 1; i >= 0; i--) {
+      const u = units[i];
+      const pc = powerColor(u.powerSource);
+      const pcStr = '#' + pc.toString(16).padStart(6, '0');
+
+      // Mini unit indicator
+      this.add.rectangle(hx - 20, 20, 36, 20, COLORS.surface).setStrokeStyle(1, pc);
+      this.add.text(hx - 20, 14, u.name.substring(0, 5), {
+        fontFamily: 'monospace', fontSize: '6px', color: pcStr,
+      }).setOrigin(0.5);
+
+      // Mini HP bar
+      const hpPct = u.stats.hp / u.stats.maxHp;
+      this.add.rectangle(hx - 20, 26, 30, 2, COLORS.border);
+      this.add.rectangle(hx - 35, 26, 30 * hpPct, 2, COLORS.safe).setOrigin(0, 0.5);
+
+      hx -= 44;
+    }
+
+    // ── Draw map ──
+    this.drawMap(runState.get().map, zoneColor);
+
+    // ── Team button ──
+    createButton(this, mob ? GAME_WIDTH / 2 : GAME_WIDTH - 80, GAME_HEIGHT - 28, 'TEAM', () => {
+      this.scene.start('Team');
+    }, { color: COLORS.copper, width: mob ? GAME_WIDTH - 40 : 120 });
   }
 
-  private drawMap(nodes: MapNode[]): void {
+  private drawMap(nodes: MapNode[], zoneColor: number): void {
     const gfx = this.add.graphics();
+    const mob = isMobile();
 
-    // Draw connections
-    gfx.lineStyle(1, COLORS.border, 0.6);
+    // ── Draw connections ──
     for (const node of nodes) {
       for (const connId of node.connections) {
         const target = nodes.find(n => n.id === connId);
-        if (target) {
-          gfx.lineBetween(node.x, node.y, target.x, target.y);
+        if (!target) continue;
+
+        const isAccessible = this.isNodeAccessible(node) || this.isNodeAccessible(target);
+        gfx.lineStyle(isAccessible ? 2 : 1, isAccessible ? zoneColor : COLORS.border, isAccessible ? 0.4 : 0.15);
+        gfx.lineBetween(node.x, node.y, target.x, target.y);
+
+        // Arrow dot at midpoint
+        if (isAccessible) {
+          const mx = (node.x + target.x) / 2;
+          const my = (node.y + target.y) / 2;
+          gfx.fillStyle(zoneColor, 0.3);
+          gfx.fillCircle(mx, my, 2);
         }
       }
     }
 
-    // Draw nodes
+    // ── Draw nodes ──
     for (const node of nodes) {
       const container = this.add.container(node.x, node.y);
-
-      const textureKey = `room_${node.type}`;
-      const hasTexture = this.textures.exists(textureKey);
-
-      // Background circle
-      const bg = this.add.graphics();
       const isAccessible = this.isNodeAccessible(node);
-      const alpha = node.visited ? 0.4 : isAccessible ? 1 : 0.3;
+      const isCurrent = node.id === runState.get().currentNodeId;
+      const roomInfo = ROOM_ICONS[node.type] ?? { symbol: '?', color: COLORS.copper };
 
-      bg.fillStyle(node.cleared ? COLORS.safe : COLORS.surface, alpha);
-      bg.fillCircle(0, 0, 18);
-      bg.lineStyle(1, isAccessible ? COLORS.copper : COLORS.border, alpha);
-      bg.strokeCircle(0, 0, 18);
-      container.add(bg);
+      const alpha = node.cleared ? 0.35 : isAccessible ? 1 : 0.2;
+      const radius = mob ? 16 : 20;
 
-      if (hasTexture) {
-        const icon = this.add.image(0, 0, textureKey).setAlpha(alpha);
-        container.add(icon);
+      // Outer ring
+      const ring = this.add.graphics();
+      if (isCurrent) {
+        ring.lineStyle(3, COLORS.copper3, 1);
+        ring.strokeCircle(0, 0, radius + 4);
       }
+      ring.fillStyle(COLORS.surface, alpha);
+      ring.fillCircle(0, 0, radius);
+      ring.lineStyle(node.cleared ? 1 : 2, node.cleared ? COLORS.safe : isAccessible ? roomInfo.color : COLORS.border, alpha);
+      ring.strokeCircle(0, 0, radius);
+      container.add(ring);
 
-      // Label
-      const label = this.add.text(0, 26, node.type.toUpperCase(), {
-        fontFamily: 'monospace',
-        fontSize: '7px',
-        color: '#7a6e5a',
-        letterSpacing: 1,
+      // Inner icon
+      const iconColor = node.cleared
+        ? '#4cae6e'
+        : '#' + roomInfo.color.toString(16).padStart(6, '0');
+      const icon = this.add.text(0, -1, roomInfo.symbol, {
+        fontFamily: 'monospace', fontSize: mob ? '12px' : '14px',
+        color: iconColor,
       }).setOrigin(0.5).setAlpha(alpha);
-      container.add(label);
+      container.add(icon);
 
-      // Current node indicator
-      if (node.id === runState.get().currentNodeId) {
-        const marker = this.add.graphics();
-        marker.lineStyle(2, COLORS.copper3);
-        marker.strokeCircle(0, 0, 22);
-        container.add(marker);
-      }
+      // Label below
+      const label = this.add.text(0, radius + 6, node.type.toUpperCase(), {
+        fontFamily: 'monospace', fontSize: '6px', color: '#7a6e5a', letterSpacing: 1,
+      }).setOrigin(0.5).setAlpha(alpha * 0.7);
+      container.add(label);
 
       // Interaction
       if (isAccessible && !node.cleared) {
-        container.setSize(40, 40);
+        container.setSize(radius * 2 + 8, radius * 2 + 8);
         container.setInteractive({ useHandCursor: true })
-          .on('pointerover', () => bg.clear().fillStyle(COLORS.copper, 0.3).fillCircle(0, 0, 18).lineStyle(2, COLORS.copper3).strokeCircle(0, 0, 18))
-          .on('pointerout', () => bg.clear().fillStyle(COLORS.surface, 1).fillCircle(0, 0, 18).lineStyle(1, COLORS.copper).strokeCircle(0, 0, 18))
+          .on('pointerover', () => {
+            ring.clear();
+            ring.fillStyle(roomInfo.color, 0.15);
+            ring.fillCircle(0, 0, radius);
+            ring.lineStyle(2, roomInfo.color, 1);
+            ring.strokeCircle(0, 0, radius);
+            icon.setScale(1.15);
+          })
+          .on('pointerout', () => {
+            ring.clear();
+            ring.fillStyle(COLORS.surface, 1);
+            ring.fillCircle(0, 0, radius);
+            ring.lineStyle(2, roomInfo.color, 1);
+            ring.strokeCircle(0, 0, radius);
+            icon.setScale(1);
+          })
           .on('pointerdown', () => this.enterRoom(node));
       }
 
@@ -131,7 +189,6 @@ export class MapScene extends Phaser.Scene {
   private isNodeAccessible(node: MapNode): boolean {
     const currentId = runState.get().currentNodeId;
     if (!currentId) {
-      // First entry — find the minimum y (first layer) and allow those nodes
       const nodes = runState.get().map;
       const minY = Math.min(...nodes.map(n => n.y));
       return node.y <= minY + 10;
@@ -142,21 +199,16 @@ export class MapScene extends Phaser.Scene {
 
   private enterRoom(node: MapNode): void {
     runState.moveTo(node.id);
+    AudioManager.playTick(0.04, 1200, 0.03);
     switch (node.type) {
-      case 'battle':
-      case 'elite':
-      case 'boss':
-        this.scene.start('Battle', { roomType: node.type });
-        break;
+      case 'battle': case 'elite': case 'boss':
+        this.scene.start('Battle', { roomType: node.type }); break;
       case 'repair':
-        this.scene.start('Repair');
-        break;
+        this.scene.start('Repair'); break;
       case 'terminal':
-        this.scene.start('Terminal');
-        break;
+        this.scene.start('Terminal'); break;
       case 'market':
-        this.scene.start('Market');
-        break;
+        this.scene.start('Market'); break;
     }
   }
 }
