@@ -53,19 +53,19 @@ export class SalvageScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     this.add.text(GAME_WIDTH / 2, 54, 'Choose parts to integrate — each carries a heat cost', {
-      fontFamily: 'monospace', fontSize: '9px', color: '#7a6e5a', letterSpacing: 2,
+      fontFamily: 'monospace', fontSize: '13px', color: '#c8b89a', letterSpacing: 2,
     }).setOrigin(0.5);
 
     // ── Unit selector (top) ──
     const units = runState.get().units.filter(u => u.alive);
     this.add.text(40, 80, 'ASSIGN TO:', {
-      fontFamily: 'monospace', fontSize: '8px', color: '#7a6e5a', letterSpacing: 2,
+      fontFamily: 'monospace', fontSize: '14px', color: '#c8b89a', letterSpacing: 2,
     });
 
     let ux = 130;
     for (const unit of units) {
       const btn = this.add.text(ux, 80, unit.name, {
-        fontFamily: 'monospace', fontSize: '10px',
+        fontFamily: 'monospace', fontSize: '14px',
         color: unit.isAxiom ? '#f0a84a' : '#b8a888',
         letterSpacing: 1,
         backgroundColor: '#1a1815',
@@ -99,7 +99,7 @@ export class SalvageScene extends Phaser.Scene {
       const u = this.selectedUnit;
       const heatPct = u.stats.thresh > 0 ? Math.round((u.stats.heat / u.stats.thresh) * 100) : 0;
       this.add.text(40, 108, `${u.name} — HP:${u.stats.hp}/${u.stats.maxHp}  ATK:${u.stats.atk}  DEF:${u.stats.def}  SPD:${u.stats.spd}  HEAT:${heatPct}%  THRESH:${u.stats.thresh}`, {
-        fontFamily: 'monospace', fontSize: '9px', color: '#b8a888', letterSpacing: 1,
+        fontFamily: 'monospace', fontSize: '13px', color: '#e8dcc8', letterSpacing: 1,
       });
     }
 
@@ -122,18 +122,18 @@ export class SalvageScene extends Phaser.Scene {
 
       // Part name
       this.add.text(px, cy - 140, part.name, {
-        fontFamily: 'monospace', fontSize: '11px', color: rarityColor, letterSpacing: 1,
+        fontFamily: 'monospace', fontSize: '15px', color: rarityColor, letterSpacing: 1,
       }).setOrigin(0.5);
 
       // Rarity + category
       this.add.text(px, cy - 118, `${part.rarity.toUpperCase()} — ${part.category.replace(/_/g, ' ').toUpperCase()}`, {
-        fontFamily: 'monospace', fontSize: '7px', color: '#7a6e5a', letterSpacing: 1,
+        fontFamily: 'monospace', fontSize: '15px', color: '#c8b89a', letterSpacing: 1,
       }).setOrigin(0.5);
 
       // Power source
       const srcColors: Record<string, string> = { steam: '#e8913a', electric: '#2aa8d4', soul: '#9b52d4' };
       this.add.text(px, cy - 98, part.powerSource.toUpperCase(), {
-        fontFamily: 'monospace', fontSize: '8px',
+        fontFamily: 'monospace', fontSize: '14px',
         color: srcColors[part.powerSource] ?? '#7a6e5a', letterSpacing: 2,
       }).setOrigin(0.5);
 
@@ -143,7 +143,7 @@ export class SalvageScene extends Phaser.Scene {
         const sign = mod.value >= 0 ? '+' : '';
         const color = mod.value >= 0 ? '#4cae6e' : '#c0432e';
         this.add.text(px, sy, `${mod.stat.toUpperCase()} ${sign}${mod.value}`, {
-          fontFamily: 'monospace', fontSize: '10px', color, letterSpacing: 1,
+          fontFamily: 'monospace', fontSize: '14px', color, letterSpacing: 1,
         }).setOrigin(0.5);
         sy += 20;
       }
@@ -156,18 +156,18 @@ export class SalvageScene extends Phaser.Scene {
         const compatColor = compat === 'full' ? '#4cae6e' : compat === 'partial' ? '#d4a82a' : '#c0432e';
 
         this.add.text(px, cy + 60, `HEAT COST: ${cost > 0 ? '-' : '+'}${Math.abs(cost)} THRESH`, {
-          fontFamily: 'monospace', fontSize: '9px',
+          fontFamily: 'monospace', fontSize: '13px',
           color: cost > 0 ? '#c0432e' : '#4cae6e',
         }).setOrigin(0.5);
 
         this.add.text(px, cy + 80, compatLabel, {
-          fontFamily: 'monospace', fontSize: '8px', color: compatColor, letterSpacing: 1,
+          fontFamily: 'monospace', fontSize: '14px', color: compatColor, letterSpacing: 1,
         }).setOrigin(0.5);
 
         // Virus warning
         if (part.virusChance && part.virusChance > 0) {
           this.add.text(px, cy + 100, `VIRUS RISK: ${Math.round(part.virusChance * 100)}%`, {
-            fontFamily: 'monospace', fontSize: '8px', color: '#c0432e', letterSpacing: 1,
+            fontFamily: 'monospace', fontSize: '14px', color: '#c0432e', letterSpacing: 1,
           }).setOrigin(0.5);
         }
 
@@ -175,17 +175,17 @@ export class SalvageScene extends Phaser.Scene {
         const equipCheck = canEquipPart(this.selectedUnit, part);
         const btnColor = equipCheck.ok ? '#e0d4bc' : '#4a4236';
         const btn = this.add.text(px, cy + 140, equipCheck.ok ? '[ INTEGRATE ]' : '[ BLOCKED ]', {
-          fontFamily: 'monospace', fontSize: '10px', color: btnColor, letterSpacing: 2,
+          fontFamily: 'monospace', fontSize: '14px', color: btnColor, letterSpacing: 2,
         }).setOrigin(0.5);
 
         if (equipCheck.ok) {
           btn.setInteractive({ useHandCursor: true })
             .on('pointerover', () => btn.setColor('#f0a84a'))
-            .on('pointerout', () => btn.setColor('#e0d4bc'))
+            .on('pointerout', () => btn.setColor('#f0e8d8'))
             .on('pointerdown', () => this.integratePart(part));
         } else {
           this.add.text(px, cy + 158, equipCheck.reason ?? '', {
-            fontFamily: 'monospace', fontSize: '7px', color: '#7a6e5a',
+            fontFamily: 'monospace', fontSize: '15px', color: '#c8b89a',
           }).setOrigin(0.5);
         }
       }
@@ -195,11 +195,11 @@ export class SalvageScene extends Phaser.Scene {
 
     // Skip button
     this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 30, '[ SKIP — RETURN TO MAP ]', {
-      fontFamily: 'monospace', fontSize: '10px', color: '#7a6e5a', letterSpacing: 2,
+      fontFamily: 'monospace', fontSize: '14px', color: '#c8b89a', letterSpacing: 2,
     }).setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
-      .on('pointerover', function(this: Phaser.GameObjects.Text) { this.setColor('#b8a888'); })
-      .on('pointerout', function(this: Phaser.GameObjects.Text) { this.setColor('#7a6e5a'); })
+      .on('pointerover', function(this: Phaser.GameObjects.Text) { this.setColor('#e8dcc8'); })
+      .on('pointerout', function(this: Phaser.GameObjects.Text) { this.setColor('#c8b89a'); })
       .on('pointerdown', () => this.returnToMap());
   }
 

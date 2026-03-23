@@ -37,8 +37,8 @@ export class GameOverScene extends Phaser.Scene {
       ? 'The Kenet source has been neutralized.'
       : 'AXIOM-0 has been destroyed. The clock stops.', {
       fontFamily: 'monospace',
-      fontSize: '10px',
-      color: '#7a6e5a',
+      fontSize: '14px',
+      color: '#c8b89a',
       letterSpacing: 2,
     }).setOrigin(0.5);
 
@@ -50,16 +50,16 @@ export class GameOverScene extends Phaser.Scene {
       `PARTS DISCOVERED: ${meta.schemaBook.length}`,
       `EXPLOSIONS RECORDED: ${meta.explosionArchive.length}`,
     ].join('\n'), {
-      fontFamily: 'monospace', fontSize: '9px', color: '#b8a888',
+      fontFamily: 'monospace', fontSize: '13px', color: '#e8dcc8',
       align: 'center', lineSpacing: 6,
     }).setOrigin(0.5);
 
     this.add.text(cx, 440, '[ RETURN TO MENU ]', {
-      fontFamily: 'monospace', fontSize: '12px', color: '#e0d4bc', letterSpacing: 3,
+      fontFamily: 'monospace', fontSize: '14px', color: '#f0e8d8', letterSpacing: 3,
     }).setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
       .on('pointerover', function(this: Phaser.GameObjects.Text) { this.setColor('#f0a84a'); })
-      .on('pointerout', function(this: Phaser.GameObjects.Text) { this.setColor('#e0d4bc'); })
+      .on('pointerout', function(this: Phaser.GameObjects.Text) { this.setColor('#f0e8d8'); })
       .on('pointerdown', () => this.scene.start('Menu'));
   }
 }

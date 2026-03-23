@@ -41,7 +41,7 @@ export class RecruitScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     this.add.text(cx, 80, 'Choose a salvaged unit to join your squad', {
-      fontFamily: 'monospace', fontSize: '9px', color: '#7a6e5a', letterSpacing: 2,
+      fontFamily: 'monospace', fontSize: '13px', color: '#c8b89a', letterSpacing: 2,
     }).setOrigin(0.5);
 
     // Generate 3 recruit options (zone-biased)
@@ -78,7 +78,7 @@ export class RecruitScene extends Phaser.Scene {
       }).setOrigin(0.5);
 
       this.add.text(x, y - 110, opt.source.toUpperCase(), {
-        fontFamily: 'monospace', fontSize: '9px', color: '#7a6e5a', letterSpacing: 3,
+        fontFamily: 'monospace', fontSize: '13px', color: '#c8b89a', letterSpacing: 3,
       }).setOrigin(0.5);
 
       // Stats preview
@@ -94,10 +94,10 @@ export class RecruitScene extends Phaser.Scene {
       let sy = y - 60;
       for (const s of statList) {
         this.add.text(x - 90, sy, s.label, {
-          fontFamily: 'monospace', fontSize: '9px', color: '#7a6e5a',
+          fontFamily: 'monospace', fontSize: '13px', color: '#c8b89a',
         });
         this.add.text(x + 90, sy, String(s.val), {
-          fontFamily: 'monospace', fontSize: '9px', color: '#b8a888',
+          fontFamily: 'monospace', fontSize: '13px', color: '#e8dcc8',
         }).setOrigin(1, 0);
 
         const barW = 120;
@@ -108,11 +108,11 @@ export class RecruitScene extends Phaser.Scene {
 
       // Recruit button
       const btn = this.add.text(x, y + 140, '[ RECRUIT ]', {
-        fontFamily: 'monospace', fontSize: '12px', color: '#e0d4bc', letterSpacing: 2,
+        fontFamily: 'monospace', fontSize: '14px', color: '#f0e8d8', letterSpacing: 2,
       }).setOrigin(0.5)
         .setInteractive({ useHandCursor: true })
         .on('pointerover', () => btn.setColor(colorStr))
-        .on('pointerout', () => btn.setColor('#e0d4bc'))
+        .on('pointerout', () => btn.setColor('#f0e8d8'))
         .on('pointerdown', () => {
           const unit = UnitFactory.createUnit(opt.name, opt.source);
           runState.addUnit(unit);

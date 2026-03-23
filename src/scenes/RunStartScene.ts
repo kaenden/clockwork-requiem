@@ -16,15 +16,15 @@ export class RunStartScene extends Phaser.Scene {
 
     this.add.text(cx, 60, 'SELECT POWER SOURCE', {
       fontFamily: 'monospace',
-      fontSize: '16px',
+      fontSize: '14px',
       color: '#f0a84a',
       letterSpacing: 4,
     }).setOrigin(0.5);
 
     this.add.text(cx, 90, 'This choice defines your run', {
       fontFamily: 'monospace',
-      fontSize: '10px',
-      color: '#7a6e5a',
+      fontSize: '14px',
+      color: '#c8b89a',
       letterSpacing: 2,
     }).setOrigin(0.5);
 
@@ -69,7 +69,7 @@ export class RunStartScene extends Phaser.Scene {
       // Title
       this.add.text(x, y - 140, src.label, {
         fontFamily: 'monospace',
-        fontSize: '18px',
+        fontSize: '14px',
         color: '#' + src.color.toString(16).padStart(6, '0'),
         letterSpacing: 4,
       }).setOrigin(0.5);
@@ -77,8 +77,8 @@ export class RunStartScene extends Phaser.Scene {
       // Description
       this.add.text(x, y - 80, src.desc, {
         fontFamily: 'monospace',
-        fontSize: '11px',
-        color: '#b8a888',
+        fontSize: '15px',
+        color: '#e8dcc8',
         align: 'center',
         lineSpacing: 4,
       }).setOrigin(0.5);
@@ -95,10 +95,10 @@ export class RunStartScene extends Phaser.Scene {
       let sy = y - 20;
       for (const s of statNames) {
         this.add.text(x - 100, sy, s.label, {
-          fontFamily: 'monospace', fontSize: '9px', color: '#7a6e5a',
+          fontFamily: 'monospace', fontSize: '13px', color: '#c8b89a',
         });
         this.add.text(x + 100, sy, String(s.val), {
-          fontFamily: 'monospace', fontSize: '9px', color: '#b8a888',
+          fontFamily: 'monospace', fontSize: '13px', color: '#e8dcc8',
         }).setOrigin(1, 0);
 
         // Bar
@@ -112,7 +112,7 @@ export class RunStartScene extends Phaser.Scene {
       const btn = this.add.text(x, y + (mob ? 90 : 140), '[ SELECT ]', {
         fontFamily: 'monospace',
         fontSize: mob ? '14px' : '12px',
-        color: '#e0d4bc',
+        color: '#f0e8d8',
         letterSpacing: 2,
       }).setOrigin(0.5)
         .setInteractive({ useHandCursor: true })
@@ -121,7 +121,7 @@ export class RunStartScene extends Phaser.Scene {
           card.setStrokeStyle(2, src.color);
         })
         .on('pointerout', () => {
-          btn.setColor('#e0d4bc');
+          btn.setColor('#f0e8d8');
           card.setStrokeStyle(1, COLORS.border);
         })
         .on('pointerdown', () => this.selectPower(src.key));

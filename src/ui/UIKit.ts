@@ -6,13 +6,14 @@ import { isMobile } from '@/utils/Mobile';
 const mob = () => isMobile();
 
 export const FONT = {
-  title:   (s?: Phaser.Scene) => ({ fontFamily: 'monospace', fontSize: mob() ? '28px' : '40px', color: '#f0a84a', letterSpacing: mob() ? 4 : 8 }),
-  heading: () => ({ fontFamily: 'monospace', fontSize: mob() ? '12px' : '14px', color: '#f0a84a', letterSpacing: 4 }),
-  sub:     () => ({ fontFamily: 'monospace', fontSize: mob() ? '8px'  : '10px', color: '#7a6e5a', letterSpacing: 2 }),
-  body:    () => ({ fontFamily: 'monospace', fontSize: mob() ? '9px'  : '11px', color: '#b8a888', letterSpacing: 1 }),
-  small:   () => ({ fontFamily: 'monospace', fontSize: mob() ? '7px'  : '9px',  color: '#7a6e5a', letterSpacing: 1 }),
-  label:   () => ({ fontFamily: 'monospace', fontSize: mob() ? '7px'  : '8px',  color: '#7a6e5a', letterSpacing: 2 }),
-  value:   () => ({ fontFamily: 'monospace', fontSize: mob() ? '8px'  : '9px',  color: '#b8a888' }),
+  title:   () => ({ fontFamily: 'monospace', fontSize: mob() ? '32px' : '44px', color: '#f5c563', letterSpacing: mob() ? 4 : 8 }),
+  heading: () => ({ fontFamily: 'monospace', fontSize: mob() ? '16px' : '18px', color: '#f5c563', letterSpacing: 4 }),
+  sub:     () => ({ fontFamily: 'monospace', fontSize: mob() ? '11px' : '13px', color: '#c8b89a', letterSpacing: 2 }),
+  body:    () => ({ fontFamily: 'monospace', fontSize: mob() ? '12px' : '14px', color: '#e8dcc8', letterSpacing: 1 }),
+  small:   () => ({ fontFamily: 'monospace', fontSize: mob() ? '10px' : '12px', color: '#c8b89a', letterSpacing: 1 }),
+  label:   () => ({ fontFamily: 'monospace', fontSize: mob() ? '9px'  : '11px', color: '#a89878', letterSpacing: 2 }),
+  value:   () => ({ fontFamily: 'monospace', fontSize: mob() ? '10px' : '12px', color: '#e8dcc8' }),
+  btn:     () => ({ fontFamily: 'monospace', fontSize: mob() ? '14px' : '14px', color: '#f0e8d8', letterSpacing: 2 }),
 };
 
 // ── Panel (dark card with accent border) ──
@@ -118,8 +119,8 @@ export function drawHeatMeter(
 
   // Label
   const pctText = Math.round(pct * 100);
-  c.add(scene.add.text(width / 2 + 8, -4, `${pctText}%`, {
-    fontFamily: 'monospace', fontSize: '8px',
+  c.add(scene.add.text(width / 2 + 8, -6, `${pctText}%`, {
+    fontFamily: 'monospace', fontSize: mob() ? '10px' : '12px',
     color: '#' + needleColor.toString(16).padStart(6, '0'),
   }));
 
@@ -135,8 +136,8 @@ export function createButton(
   options: { color?: number; width?: number; disabled?: boolean } = {}
 ): Phaser.GameObjects.Container {
   const c = scene.add.container(x, y);
-  const w = options.width ?? (mob() ? 200 : 180);
-  const h = mob() ? 40 : 32;
+  const w = options.width ?? (mob() ? 240 : 220);
+  const h = mob() ? 44 : 38;
   const color = options.color ?? COLORS.copper;
   const disabled = options.disabled ?? false;
   const colorStr = '#' + color.toString(16).padStart(6, '0');
@@ -149,8 +150,8 @@ export function createButton(
   // Text
   const txt = scene.add.text(0, 0, label, {
     fontFamily: 'monospace',
-    fontSize: mob() ? '12px' : '11px',
-    color: disabled ? '#4a4236' : '#e0d4bc',
+    fontSize: mob() ? '14px' : '14px',
+    color: disabled ? '#5a5040' : '#f0e8d8',
     letterSpacing: 2,
   }).setOrigin(0.5);
   c.add(txt);
@@ -164,7 +165,7 @@ export function createButton(
       })
       .on('pointerout', () => {
         bg.setStrokeStyle(1, color);
-        txt.setColor('#e0d4bc');
+        txt.setColor('#f0e8d8');
       })
       .on('pointerdown', callback);
   }

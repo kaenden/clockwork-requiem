@@ -16,7 +16,7 @@ export class PreloadScene extends Phaser.Scene {
     const fill = this.add.rectangle(cx - barW / 2, cy, 0, barH, COLORS.copper).setOrigin(0, 0.5);
 
     const label = this.add.text(cx, cy - 30, 'INITIALIZING AXIOM SYSTEMS...', {
-      fontFamily: 'monospace', fontSize: '10px', color: '#7a6e5a', letterSpacing: 3,
+      fontFamily: 'monospace', fontSize: '14px', color: '#c8b89a', letterSpacing: 3,
     }).setOrigin(0.5);
 
     this.load.on('progress', (p: number) => { fill.width = barW * p; });

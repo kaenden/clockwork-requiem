@@ -47,7 +47,7 @@ export class PvpBattleScene extends Phaser.Scene {
         playerUnits = PvpManager.snapshotToUnits(snaps[snaps.length - 1]);
       } else {
         this.add.text(cx, GAME_HEIGHT / 2, 'No team available. Start a run first.', {
-          fontFamily: 'monospace', fontSize: '11px', color: '#c0432e',
+          fontFamily: 'monospace', fontSize: '15px', color: '#c0432e',
         }).setOrigin(0.5);
         this.time.delayedCall(2000, () => this.scene.start('PvpMenu'));
         return;
@@ -63,35 +63,35 @@ export class PvpBattleScene extends Phaser.Scene {
 
     // Header
     this.add.text(cx, 16, '// PROTOCOL WAR //', {
-      fontFamily: 'monospace', fontSize: '10px', color: '#f0a84a', letterSpacing: 3,
+      fontFamily: 'monospace', fontSize: '14px', color: '#f0a84a', letterSpacing: 3,
     }).setOrigin(0.5);
 
     if (this.heatBet) {
       this.add.text(cx, 34, 'HEAT BET ACTIVE — Starting at 80% HEAT', {
-        fontFamily: 'monospace', fontSize: '8px', color: '#c0432e', letterSpacing: 2,
+        fontFamily: 'monospace', fontSize: '14px', color: '#c0432e', letterSpacing: 2,
       }).setOrigin(0.5);
     }
 
     // Player side
     this.add.text(40, 55, 'YOUR SQUAD', {
-      fontFamily: 'monospace', fontSize: '9px', color: '#4cae6e', letterSpacing: 2,
+      fontFamily: 'monospace', fontSize: '13px', color: '#4cae6e', letterSpacing: 2,
     });
     let py = 75;
     for (const u of playerUnits) {
       this.add.text(40, py, `${u.name} Lv.${u.level} [${u.powerSource.toUpperCase()}]`, {
-        fontFamily: 'monospace', fontSize: '9px', color: '#b8a888',
+        fontFamily: 'monospace', fontSize: '13px', color: '#e8dcc8',
       });
       py += 18;
     }
 
     // Enemy side
     this.add.text(GAME_WIDTH - 40, 55, `VS ${this.opponent.name}`, {
-      fontFamily: 'monospace', fontSize: '9px', color: '#c0432e', letterSpacing: 2,
+      fontFamily: 'monospace', fontSize: '13px', color: '#c0432e', letterSpacing: 2,
     }).setOrigin(1, 0);
     let ey = 75;
     for (const u of enemyUnits) {
       this.add.text(GAME_WIDTH - 40, ey, `${u.name} Lv.${u.level} [${u.powerSource.toUpperCase()}]`, {
-        fontFamily: 'monospace', fontSize: '9px', color: '#c0432e',
+        fontFamily: 'monospace', fontSize: '13px', color: '#c0432e',
       }).setOrigin(1, 0);
       ey += 18;
     }
@@ -104,7 +104,7 @@ export class PvpBattleScene extends Phaser.Scene {
       .setStrokeStyle(1, COLORS.border);
 
     this.logText = this.add.text(50, GAME_HEIGHT - 265, '', {
-      fontFamily: 'monospace', fontSize: '9px', color: '#b8a888',
+      fontFamily: 'monospace', fontSize: '13px', color: '#e8dcc8',
       lineSpacing: 3, wordWrap: { width: GAME_WIDTH - 100 },
     });
 
@@ -166,25 +166,25 @@ export class PvpBattleScene extends Phaser.Scene {
     }
 
     this.add.text(cx, GAME_HEIGHT / 2 - 80, won ? 'VICTORY' : 'DEFEAT', {
-      fontFamily: 'monospace', fontSize: '24px',
+      fontFamily: 'monospace', fontSize: '28px',
       color: won ? '#4cae6e' : '#c0432e', letterSpacing: 6,
     }).setOrigin(0.5);
 
     const sign = delta >= 0 ? '+' : '';
     this.add.text(cx, GAME_HEIGHT / 2 - 50,
       `Rating: ${sign}${delta}${betBonus} → ${metaState.get().pvpRating}`, {
-      fontFamily: 'monospace', fontSize: '10px',
+      fontFamily: 'monospace', fontSize: '14px',
       color: delta >= 0 ? '#4cae6e' : '#c0432e', letterSpacing: 2,
     }).setOrigin(0.5);
 
     this.add.text(cx, GAME_HEIGHT / 2 - 30,
       `${this.result.totalTurns} turns`, {
-      fontFamily: 'monospace', fontSize: '9px', color: '#7a6e5a',
+      fontFamily: 'monospace', fontSize: '13px', color: '#c8b89a',
     }).setOrigin(0.5);
 
     this.time.delayedCall(2500, () => {
       this.add.text(cx, GAME_HEIGHT / 2 + 10, '[ RETURN TO PVP MENU ]', {
-        fontFamily: 'monospace', fontSize: '11px', color: '#e0d4bc', letterSpacing: 2,
+        fontFamily: 'monospace', fontSize: '15px', color: '#f0e8d8', letterSpacing: 2,
       }).setOrigin(0.5)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => this.scene.start('PvpMenu'));

@@ -43,7 +43,7 @@ export class TeamScene extends Phaser.Scene {
 
     // Back button
     this.add.text(40, GAME_HEIGHT - 28, '[ BACK TO MAP ]', {
-      fontFamily: 'monospace', fontSize: '10px', color: '#7a6e5a', letterSpacing: 2,
+      fontFamily: 'monospace', fontSize: '14px', color: '#c8b89a', letterSpacing: 2,
     }).setInteractive({ useHandCursor: true })
       .on('pointerdown', () => {
         SaveManager.saveAll();
@@ -64,7 +64,7 @@ export class TeamScene extends Phaser.Scene {
     // Name
     const nameColor = !unit.alive ? '#4a4236' : unit.isAxiom ? '#f0a84a' : '#b8a888';
     this.add.text(x, y - 250, unit.name, {
-      fontFamily: 'monospace', fontSize: '11px', color: nameColor, letterSpacing: 2,
+      fontFamily: 'monospace', fontSize: '15px', color: nameColor, letterSpacing: 2,
     }).setOrigin(0.5);
 
     // Level + source + body + weapon
@@ -76,7 +76,7 @@ export class TeamScene extends Phaser.Scene {
     ].join(' | ');
 
     this.add.text(x, y - 230, classLine, {
-      fontFamily: 'monospace', fontSize: '7px', color: '#7a6e5a', letterSpacing: 1,
+      fontFamily: 'monospace', fontSize: '15px', color: '#c8b89a', letterSpacing: 1,
     }).setOrigin(0.5);
 
     if (!unit.alive) {
@@ -103,10 +103,10 @@ export class TeamScene extends Phaser.Scene {
     const barW = cardW - 60;
     for (const s of stats) {
       this.add.text(x - cardW / 2 + 12, sy, s.label, {
-        fontFamily: 'monospace', fontSize: '7px', color: '#7a6e5a',
+        fontFamily: 'monospace', fontSize: '15px', color: '#c8b89a',
       });
       this.add.text(x + cardW / 2 - 12, sy, s.val, {
-        fontFamily: 'monospace', fontSize: '7px', color: '#b8a888',
+        fontFamily: 'monospace', fontSize: '15px', color: '#e8dcc8',
       }).setOrigin(1, 0);
 
       this.add.rectangle(x, sy + 12, barW, 2, COLORS.border);
@@ -117,13 +117,13 @@ export class TeamScene extends Phaser.Scene {
     // Parts
     sy += 4;
     this.add.text(x, sy, 'PARTS', {
-      fontFamily: 'monospace', fontSize: '7px', color: '#7a6e5a', letterSpacing: 2,
+      fontFamily: 'monospace', fontSize: '15px', color: '#c8b89a', letterSpacing: 2,
     }).setOrigin(0.5);
     sy += 14;
 
     if (unit.parts.length === 0) {
       this.add.text(x, sy, '-- empty --', {
-        fontFamily: 'monospace', fontSize: '8px', color: '#4a4236',
+        fontFamily: 'monospace', fontSize: '14px', color: '#6a5e50',
       }).setOrigin(0.5);
       sy += 14;
     } else {
@@ -133,12 +133,12 @@ export class TeamScene extends Phaser.Scene {
           epic: '#9b52d4', legendary: '#f0a84a', kenet: '#c0432e',
         };
         this.add.text(x - cardW / 2 + 12, sy, part.name, {
-          fontFamily: 'monospace', fontSize: '8px', color: rarColor[part.rarity] ?? '#aaa',
+          fontFamily: 'monospace', fontSize: '14px', color: rarColor[part.rarity] ?? '#aaa',
         });
 
         // Remove button
         this.add.text(x + cardW / 2 - 12, sy, 'X', {
-          fontFamily: 'monospace', fontSize: '8px', color: '#c0432e',
+          fontFamily: 'monospace', fontSize: '14px', color: '#c0432e',
         }).setOrigin(1, 0)
           .setInteractive({ useHandCursor: true })
           .on('pointerdown', () => {
@@ -156,7 +156,7 @@ export class TeamScene extends Phaser.Scene {
     // Directive selector
     sy = y + 220;
     this.add.text(x, sy, 'DIRECTIVE', {
-      fontFamily: 'monospace', fontSize: '7px', color: '#7a6e5a', letterSpacing: 2,
+      fontFamily: 'monospace', fontSize: '15px', color: '#c8b89a', letterSpacing: 2,
     }).setOrigin(0.5);
     sy += 16;
 
@@ -165,7 +165,7 @@ export class TeamScene extends Phaser.Scene {
     for (const dir of DIRECTIVES) {
       const isActive = unit.directive === dir.key;
       const btn = this.add.text(bx, sy, dir.label, {
-        fontFamily: 'monospace', fontSize: '8px',
+        fontFamily: 'monospace', fontSize: '14px',
         color: isActive ? accentStr : '#4a4236',
         letterSpacing: 1,
         backgroundColor: isActive ? '#2a2620' : undefined,

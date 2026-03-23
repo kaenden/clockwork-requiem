@@ -58,7 +58,7 @@ export class MenuScene extends Phaser.Scene {
     const subY = titleY + (mob ? 80 : 115);
     this.add.text(cx, subY, 'ROGUELITE  AUTOBATTLER', {
       fontFamily: 'monospace', fontSize: mob ? '8px' : '10px',
-      color: '#7a6e5a', letterSpacing: mob ? 3 : 6,
+      color: '#c8b89a', letterSpacing: mob ? 3 : 6,
     }).setOrigin(0.5);
 
     // Divider
@@ -91,13 +91,13 @@ export class MenuScene extends Phaser.Scene {
       const metaY = GAME_HEIGHT - (mob ? 70 : 80);
       drawDivider(this, metaY - 12, mob ? GAME_WIDTH - 40 : 400);
       this.add.text(cx, metaY, `RUNS ${meta.totalRuns}  |  WINS ${meta.totalWins}  |  ASC ${meta.ascensionLevel}  |  PARTS ${meta.schemaBook.length}`, {
-        fontFamily: 'monospace', fontSize: mob ? '7px' : '8px', color: '#4a4236', letterSpacing: 1,
+        fontFamily: 'monospace', fontSize: mob ? '7px' : '8px', color: '#6a5e50', letterSpacing: 1,
       }).setOrigin(0.5);
     }
 
     // ── Sound toggle ──
     const soundBtn = this.add.text(GAME_WIDTH - 16, 16, 'SND', {
-      fontFamily: 'monospace', fontSize: '9px', color: '#7a6e5a',
+      fontFamily: 'monospace', fontSize: '13px', color: '#c8b89a',
       backgroundColor: '#1a1815', padding: { x: 6, y: 4 },
     }).setOrigin(1, 0).setInteractive({ useHandCursor: true })
       .on('pointerdown', function(this: Phaser.GameObjects.Text) {
@@ -107,7 +107,7 @@ export class MenuScene extends Phaser.Scene {
 
     // ── Tagline ──
     this.add.text(cx, GAME_HEIGHT - 28, '"The clock always demands a price."', {
-      fontFamily: 'serif', fontSize: mob ? '10px' : '12px', color: '#4a4236',
+      fontFamily: 'serif', fontSize: mob ? '10px' : '12px', color: '#6a5e50',
       fontStyle: 'italic',
     }).setOrigin(0.5);
   }

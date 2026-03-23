@@ -103,11 +103,11 @@ export class SplitScene extends Phaser.Scene {
       : `${unit.name} reached Lv.20 — choose a weapon module`;
 
     this.add.text(cx, 50, title, {
-      fontFamily: 'monospace', fontSize: '16px', color: '#f0a84a', letterSpacing: 4,
+      fontFamily: 'monospace', fontSize: '14px', color: '#f0a84a', letterSpacing: 4,
     }).setOrigin(0.5);
 
     this.add.text(cx, 80, subtitle, {
-      fontFamily: 'monospace', fontSize: '9px', color: '#7a6e5a', letterSpacing: 2,
+      fontFamily: 'monospace', fontSize: '13px', color: '#c8b89a', letterSpacing: 2,
     }).setOrigin(0.5);
 
     const srcColors: Record<PowerSource, number> = {
@@ -144,16 +144,16 @@ export class SplitScene extends Phaser.Scene {
       }).setOrigin(0.5);
 
       this.add.text(x, y - 40, opt.desc, {
-        fontFamily: 'monospace', fontSize: '10px', color: '#b8a888',
+        fontFamily: 'monospace', fontSize: '14px', color: '#e8dcc8',
         align: 'center', lineSpacing: 6, wordWrap: { width: cardW - 40 },
       }).setOrigin(0.5);
 
       const btn = this.add.text(x, y + 130, '[ SELECT ]', {
-        fontFamily: 'monospace', fontSize: '12px', color: '#e0d4bc', letterSpacing: 2,
+        fontFamily: 'monospace', fontSize: '14px', color: '#f0e8d8', letterSpacing: 2,
       }).setOrigin(0.5)
         .setInteractive({ useHandCursor: true })
         .on('pointerover', () => btn.setColor(accentStr))
-        .on('pointerout', () => btn.setColor('#e0d4bc'))
+        .on('pointerout', () => btn.setColor('#f0e8d8'))
         .on('pointerdown', () => {
           if (isBody) {
             unit.bodyType = opt.type as BodyType;

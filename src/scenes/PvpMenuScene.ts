@@ -23,14 +23,14 @@ export class PvpMenuScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     this.add.text(cx, 56, `YOUR RATING: ${rating}`, {
-      fontFamily: 'monospace', fontSize: '10px', color: '#d4893a', letterSpacing: 2,
+      fontFamily: 'monospace', fontSize: '14px', color: '#d4893a', letterSpacing: 2,
     }).setOrigin(0.5);
 
     // ── Save current run as PvP config ──
     const hasActiveRun = runState.get().active;
     if (hasActiveRun) {
       this.add.text(cx, 90, '[ SAVE CURRENT CONFIG TO ARCHIVE ]', {
-        fontFamily: 'monospace', fontSize: '10px', color: '#4cae6e', letterSpacing: 2,
+        fontFamily: 'monospace', fontSize: '14px', color: '#4cae6e', letterSpacing: 2,
       }).setOrigin(0.5)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => {
@@ -43,7 +43,7 @@ export class PvpMenuScene extends Phaser.Scene {
 
     // ── Opponent List ──
     this.add.text(40, 125, 'AVAILABLE OPPONENTS', {
-      fontFamily: 'monospace', fontSize: '9px', color: '#7a6e5a', letterSpacing: 3,
+      fontFamily: 'monospace', fontSize: '13px', color: '#c8b89a', letterSpacing: 3,
     });
 
     const opponents = PvpManager.getOpponents();
@@ -52,7 +52,7 @@ export class PvpMenuScene extends Phaser.Scene {
 
     if (opponents.length === 0) {
       container.add(this.add.text(40, y, 'No opponents available. Complete a run first.', {
-        fontFamily: 'monospace', fontSize: '9px', color: '#4a4236',
+        fontFamily: 'monospace', fontSize: '13px', color: '#6a5e50',
       }));
     } else {
       for (const opp of opponents) {
@@ -66,29 +66,29 @@ export class PvpMenuScene extends Phaser.Scene {
 
         // Name
         container.add(this.add.text(60, y + 10, opp.name, {
-          fontFamily: 'monospace', fontSize: '12px',
+          fontFamily: 'monospace', fontSize: '14px',
           color: isGhost ? '#c0432e' : '#f0a84a', letterSpacing: 2,
         }));
 
         // Info line
         const unitSummary = opp.units.map(u => `${u.powerSource[0].toUpperCase()}${u.level}`).join(' ');
         container.add(this.add.text(60, y + 30, `${opp.units.length} units | ${unitSummary} | Rating: ${opp.rating}`, {
-          fontFamily: 'monospace', fontSize: '8px', color: '#7a6e5a', letterSpacing: 1,
+          fontFamily: 'monospace', fontSize: '14px', color: '#c8b89a', letterSpacing: 1,
         }));
 
         if (isGhost) {
           container.add(this.add.text(60, y + 46, 'KENET AI', {
-            fontFamily: 'monospace', fontSize: '7px', color: '#c0432e', letterSpacing: 2,
+            fontFamily: 'monospace', fontSize: '15px', color: '#c0432e', letterSpacing: 2,
           }));
         }
 
         // Fight button
         const btn = this.add.text(GAME_WIDTH - 80, y + cardH / 2, '[ FIGHT ]', {
-          fontFamily: 'monospace', fontSize: '11px', color: '#e0d4bc', letterSpacing: 2,
+          fontFamily: 'monospace', fontSize: '15px', color: '#f0e8d8', letterSpacing: 2,
         }).setOrigin(1, 0.5)
           .setInteractive({ useHandCursor: true })
           .on('pointerover', () => btn.setColor('#f0a84a'))
-          .on('pointerout', () => btn.setColor('#e0d4bc'))
+          .on('pointerout', () => btn.setColor('#f0e8d8'))
           .on('pointerdown', () => {
             this.scene.start('PvpBattle', { opponent: opp, heatBet: false });
           });
@@ -96,7 +96,7 @@ export class PvpMenuScene extends Phaser.Scene {
 
         // Heat Bet button
         const betBtn = this.add.text(GAME_WIDTH - 200, y + cardH / 2, '[ HEAT BET ]', {
-          fontFamily: 'monospace', fontSize: '9px', color: '#c0432e', letterSpacing: 1,
+          fontFamily: 'monospace', fontSize: '13px', color: '#c0432e', letterSpacing: 1,
         }).setOrigin(1, 0.5)
           .setInteractive({ useHandCursor: true })
           .on('pointerover', () => betBtn.setColor('#ff6b4a'))
@@ -117,7 +117,7 @@ export class PvpMenuScene extends Phaser.Scene {
 
     // ── Leaderboard sidebar ──
     this.add.text(GAME_WIDTH - 260, 125, 'LEADERBOARD', {
-      fontFamily: 'monospace', fontSize: '9px', color: '#7a6e5a', letterSpacing: 3,
+      fontFamily: 'monospace', fontSize: '13px', color: '#c8b89a', letterSpacing: 3,
     });
 
     const board = PvpManager.getLeaderboard();
@@ -125,17 +125,17 @@ export class PvpMenuScene extends Phaser.Scene {
     for (let i = 0; i < Math.min(8, board.length); i++) {
       const entry = board[i];
       this.add.text(GAME_WIDTH - 260, ly, `${i + 1}. ${entry.name}`, {
-        fontFamily: 'monospace', fontSize: '8px', color: '#b8a888',
+        fontFamily: 'monospace', fontSize: '14px', color: '#e8dcc8',
       });
       this.add.text(GAME_WIDTH - 60, ly, `${entry.rating}`, {
-        fontFamily: 'monospace', fontSize: '8px', color: '#f0a84a',
+        fontFamily: 'monospace', fontSize: '14px', color: '#f0a84a',
       }).setOrigin(1, 0);
       ly += 16;
     }
 
     // Back
     this.add.text(40, GAME_HEIGHT - 28, '[ BACK TO MENU ]', {
-      fontFamily: 'monospace', fontSize: '10px', color: '#7a6e5a', letterSpacing: 2,
+      fontFamily: 'monospace', fontSize: '14px', color: '#c8b89a', letterSpacing: 2,
     }).setInteractive({ useHandCursor: true })
       .on('pointerdown', () => this.scene.start('Menu'));
   }

@@ -14,16 +14,16 @@ export class MarketScene extends Phaser.Scene {
 
     const score = runState.get().consciousnessScore;
     this.add.text(GAME_WIDTH / 2, 70, `CONSCIOUSNESS: ${score}`, {
-      fontFamily: 'monospace', fontSize: '9px', color: '#7a6e5a', letterSpacing: 2,
+      fontFamily: 'monospace', fontSize: '13px', color: '#c8b89a', letterSpacing: 2,
     }).setOrigin(0.5);
 
     // TODO: Part shop with consciousness currency
     this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'Market inventory coming soon...', {
-      fontFamily: 'monospace', fontSize: '11px', color: '#7a6e5a',
+      fontFamily: 'monospace', fontSize: '15px', color: '#c8b89a',
     }).setOrigin(0.5);
 
     this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 40, '[ RETURN TO MAP ]', {
-      fontFamily: 'monospace', fontSize: '10px', color: '#7a6e5a', letterSpacing: 2,
+      fontFamily: 'monospace', fontSize: '14px', color: '#c8b89a', letterSpacing: 2,
     }).setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => {

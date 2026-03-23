@@ -114,7 +114,7 @@ export class TutorialScene extends Phaser.Scene {
 
     // Page indicator
     this.add.text(cx, 30, `${this.pageIndex + 1} / ${PAGES.length}`, {
-      fontFamily: 'monospace', fontSize: '8px', color: '#4a4236', letterSpacing: 3,
+      fontFamily: 'monospace', fontSize: '14px', color: '#6a5e50', letterSpacing: 3,
     }).setOrigin(0.5);
 
     // Progress bar
@@ -124,7 +124,7 @@ export class TutorialScene extends Phaser.Scene {
 
     // Title
     this.add.text(cx, 90, page.title, {
-      fontFamily: 'monospace', fontSize: '18px', color: accentStr, letterSpacing: 5,
+      fontFamily: 'monospace', fontSize: '14px', color: accentStr, letterSpacing: 5,
     }).setOrigin(0.5);
 
     // Content
@@ -144,7 +144,7 @@ export class TutorialScene extends Phaser.Scene {
       if (line.match(/^\d\./)) color = '#e0d4bc';
 
       this.add.text(cx, y, line, {
-        fontFamily: 'monospace', fontSize: '11px', color, letterSpacing: 1,
+        fontFamily: 'monospace', fontSize: '15px', color, letterSpacing: 1,
       }).setOrigin(0.5);
       y += 22;
     }
@@ -152,7 +152,7 @@ export class TutorialScene extends Phaser.Scene {
     // Navigation
     if (this.pageIndex > 0) {
       this.add.text(100, GAME_HEIGHT - 40, '[ BACK ]', {
-        fontFamily: 'monospace', fontSize: '11px', color: '#7a6e5a', letterSpacing: 2,
+        fontFamily: 'monospace', fontSize: '15px', color: '#c8b89a', letterSpacing: 2,
       }).setOrigin(0.5)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => { this.pageIndex--; this.showPage(); AudioManager.playTick(0.03); });
@@ -160,13 +160,13 @@ export class TutorialScene extends Phaser.Scene {
 
     if (this.pageIndex < PAGES.length - 1) {
       this.add.text(GAME_WIDTH - 100, GAME_HEIGHT - 40, '[ NEXT ]', {
-        fontFamily: 'monospace', fontSize: '11px', color: '#f0a84a', letterSpacing: 2,
+        fontFamily: 'monospace', fontSize: '15px', color: '#f0a84a', letterSpacing: 2,
       }).setOrigin(0.5)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => { this.pageIndex++; this.showPage(); AudioManager.playTick(0.03); });
     } else {
       this.add.text(GAME_WIDTH - 100, GAME_HEIGHT - 40, '[ BEGIN ]', {
-        fontFamily: 'monospace', fontSize: '12px', color: '#4cae6e', letterSpacing: 3,
+        fontFamily: 'monospace', fontSize: '14px', color: '#4cae6e', letterSpacing: 3,
       }).setOrigin(0.5)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => {
@@ -177,7 +177,7 @@ export class TutorialScene extends Phaser.Scene {
 
     // Skip
     this.add.text(cx, GAME_HEIGHT - 40, '[ SKIP ]', {
-      fontFamily: 'monospace', fontSize: '9px', color: '#4a4236', letterSpacing: 2,
+      fontFamily: 'monospace', fontSize: '13px', color: '#6a5e50', letterSpacing: 2,
     }).setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => {

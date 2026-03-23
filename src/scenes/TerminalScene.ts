@@ -13,18 +13,18 @@ export class TerminalScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     this.add.text(GAME_WIDTH / 2, 70, 'Decrypted protocol fragment — choose wisely', {
-      fontFamily: 'monospace', fontSize: '9px', color: '#7a6e5a', letterSpacing: 2,
+      fontFamily: 'monospace', fontSize: '13px', color: '#c8b89a', letterSpacing: 2,
     }).setOrigin(0.5);
 
     // Lore text
     this.add.text(GAME_WIDTH / 2, 160, '"The machines never stopped working.\nThey simply forgot why they started."', {
-      fontFamily: 'serif', fontSize: '14px', color: '#b8a888',
+      fontFamily: 'serif', fontSize: '14px', color: '#e8dcc8',
       fontStyle: 'italic', align: 'center', lineSpacing: 6,
     }).setOrigin(0.5);
 
     // Choice: Buff or Risk
     const choice1 = this.add.text(GAME_WIDTH / 2 - 160, 300, '[ SAFE PROTOCOL ]\n+5 THRESH to all units', {
-      fontFamily: 'monospace', fontSize: '10px', color: '#4cae6e',
+      fontFamily: 'monospace', fontSize: '14px', color: '#4cae6e',
       align: 'center', lineSpacing: 6,
     }).setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
@@ -34,7 +34,7 @@ export class TerminalScene extends Phaser.Scene {
       });
 
     const choice2 = this.add.text(GAME_WIDTH / 2 + 160, 300, '[ RISKY DECRYPT ]\n+15 ATK to AXIOM, +10 HEAT', {
-      fontFamily: 'monospace', fontSize: '10px', color: '#c0432e',
+      fontFamily: 'monospace', fontSize: '14px', color: '#c0432e',
       align: 'center', lineSpacing: 6,
     }).setOrigin(0.5)
       .setInteractive({ useHandCursor: true })

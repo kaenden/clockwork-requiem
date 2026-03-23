@@ -60,7 +60,7 @@ export class MapScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     this.add.text(GAME_WIDTH / 2, 38, `FLOOR ${state.floor}  |  ASCENSION ${state.ascension}`, {
-      fontFamily: 'monospace', fontSize: '8px', color: '#7a6e5a', letterSpacing: 2,
+      fontFamily: 'monospace', fontSize: '14px', color: '#c8b89a', letterSpacing: 2,
     }).setOrigin(0.5);
 
     // Zone accent line
@@ -77,7 +77,7 @@ export class MapScene extends Phaser.Scene {
       // Mini unit indicator
       this.add.rectangle(hx - 20, 20, 36, 20, COLORS.surface).setStrokeStyle(1, pc);
       this.add.text(hx - 20, 14, u.name.substring(0, 5), {
-        fontFamily: 'monospace', fontSize: '6px', color: pcStr,
+        fontFamily: 'monospace', fontSize: '14px', color: pcStr,
       }).setOrigin(0.5);
 
       // Mini HP bar
@@ -155,7 +155,7 @@ export class MapScene extends Phaser.Scene {
 
       // Label below
       const label = this.add.text(0, radius + 6, node.type.toUpperCase(), {
-        fontFamily: 'monospace', fontSize: '6px', color: '#7a6e5a', letterSpacing: 1,
+        fontFamily: 'monospace', fontSize: '14px', color: '#c8b89a', letterSpacing: 1,
       }).setOrigin(0.5).setAlpha(alpha * 0.7);
       container.add(label);
 

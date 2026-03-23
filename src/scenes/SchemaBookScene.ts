@@ -31,11 +31,11 @@ export class SchemaBookScene extends Phaser.Scene {
     const pct = totalParts > 0 ? Math.round((discovered.length / totalParts) * 100) : 0;
 
     this.add.text(GAME_WIDTH / 2, 30, 'SCHEMA BOOK', {
-      fontFamily: 'monospace', fontSize: '16px', color: '#f0a84a', letterSpacing: 4,
+      fontFamily: 'monospace', fontSize: '14px', color: '#f0a84a', letterSpacing: 4,
     }).setOrigin(0.5);
 
     this.add.text(GAME_WIDTH / 2, 56, `${discovered.length} / ${totalParts} DISCOVERED (${pct}%)`, {
-      fontFamily: 'monospace', fontSize: '9px', color: '#7a6e5a', letterSpacing: 2,
+      fontFamily: 'monospace', fontSize: '13px', color: '#c8b89a', letterSpacing: 2,
     }).setOrigin(0.5);
 
     // Progress bar
@@ -52,7 +52,7 @@ export class SchemaBookScene extends Phaser.Scene {
       if (catParts.length === 0) continue;
 
       container.add(this.add.text(40, y, CAT_LABELS[cat] ?? cat, {
-        fontFamily: 'monospace', fontSize: '10px', color: '#d4893a', letterSpacing: 3,
+        fontFamily: 'monospace', fontSize: '14px', color: '#d4893a', letterSpacing: 3,
       }));
       y += 24;
 
@@ -70,10 +70,10 @@ export class SchemaBookScene extends Phaser.Scene {
 
         if (found) {
           container.add(this.add.text(x + 10, y + 10, part.name, {
-            fontFamily: 'monospace', fontSize: '9px', color: rarColor,
+            fontFamily: 'monospace', fontSize: '13px', color: rarColor,
           }));
           container.add(this.add.text(x + 10, y + 26, `${part.rarity.toUpperCase()} | ${part.powerSource.toUpperCase()}`, {
-            fontFamily: 'monospace', fontSize: '7px', color: '#7a6e5a', letterSpacing: 1,
+            fontFamily: 'monospace', fontSize: '15px', color: '#c8b89a', letterSpacing: 1,
           }));
 
           const modText = part.statMods.map(m => {
@@ -81,11 +81,11 @@ export class SchemaBookScene extends Phaser.Scene {
             return `${m.stat.toUpperCase()} ${sign}${m.value}`;
           }).join('  ');
           container.add(this.add.text(x + 10, y + 40, modText || 'Utility', {
-            fontFamily: 'monospace', fontSize: '7px', color: '#b8a888',
+            fontFamily: 'monospace', fontSize: '15px', color: '#e8dcc8',
           }));
         } else {
           container.add(this.add.text(x + 100, y + 30, '? ? ?', {
-            fontFamily: 'monospace', fontSize: '11px', color: '#4a4236',
+            fontFamily: 'monospace', fontSize: '15px', color: '#6a5e50',
           }).setOrigin(0.5));
         }
 
@@ -106,7 +106,7 @@ export class SchemaBookScene extends Phaser.Scene {
 
     // Back
     this.add.text(40, GAME_HEIGHT - 28, '[ BACK TO MENU ]', {
-      fontFamily: 'monospace', fontSize: '10px', color: '#7a6e5a', letterSpacing: 2,
+      fontFamily: 'monospace', fontSize: '14px', color: '#c8b89a', letterSpacing: 2,
     }).setInteractive({ useHandCursor: true })
       .on('pointerdown', () => this.scene.start('Menu'));
   }

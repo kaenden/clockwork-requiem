@@ -73,14 +73,14 @@ export class BattleScene extends Phaser.Scene {
     const synergies = SynergyEngine.evaluate(realAllies);
     if (synergies.length > 0) {
       this.add.text(GAME_WIDTH / 2, 32, synergies.map(s => s.type.replace(/_/g, ' ').toUpperCase()).join(' + '), {
-        fontFamily: 'monospace', fontSize: '7px', color: '#4cae6e', letterSpacing: 2,
+        fontFamily: 'monospace', fontSize: '15px', color: '#4cae6e', letterSpacing: 2,
       }).setOrigin(0.5);
     }
 
     const warnings = SynergyEngine.checkAntiSynergies(realAllies);
     if (warnings.length > 0) {
       this.add.text(GAME_WIDTH / 2, 42, warnings[0].substring(0, 60), {
-        fontFamily: 'monospace', fontSize: '7px', color: '#c0432e', letterSpacing: 1,
+        fontFamily: 'monospace', fontSize: '15px', color: '#c0432e', letterSpacing: 1,
       }).setOrigin(0.5);
     }
 
@@ -88,7 +88,7 @@ export class BattleScene extends Phaser.Scene {
     const panelW = mob ? GAME_WIDTH / 2 - 10 : 320;
     this.add.rectangle(panelW / 2 + 8, 55, panelW, 2, COLORS.safe, 0.4).setOrigin(0.5, 0);
     this.add.text(14, 58, 'AXIOM SQUAD', {
-      fontFamily: 'monospace', fontSize: '8px', color: '#4cae6e', letterSpacing: 3,
+      fontFamily: 'monospace', fontSize: '14px', color: '#4cae6e', letterSpacing: 3,
     });
 
     let py = 78;
@@ -122,7 +122,7 @@ export class BattleScene extends Phaser.Scene {
     const enemyX = GAME_WIDTH - 14;
     this.add.rectangle(GAME_WIDTH - panelW / 2 - 8, 55, panelW, 2, COLORS.rust2, 0.4).setOrigin(0.5, 0);
     this.add.text(enemyX, 58, 'KENET FORCES', {
-      fontFamily: 'monospace', fontSize: '8px', color: '#c0432e', letterSpacing: 3,
+      fontFamily: 'monospace', fontSize: '14px', color: '#c0432e', letterSpacing: 3,
     }).setOrigin(1, 0);
 
     let ey = 78;
@@ -148,10 +148,10 @@ export class BattleScene extends Phaser.Scene {
       .setStrokeStyle(1, COLORS.border);
     this.add.rectangle(GAME_WIDTH / 2, logY - logH / 2, GAME_WIDTH - 40, 2, COLORS.copper, 0.3).setOrigin(0.5, 0);
     this.add.text(GAME_WIDTH / 2, logY - logH / 2 + 6, 'BATTLE LOG', {
-      fontFamily: 'monospace', fontSize: '7px', color: '#7a6e5a', letterSpacing: 3,
+      fontFamily: 'monospace', fontSize: '15px', color: '#c8b89a', letterSpacing: 3,
     }).setOrigin(0.5);
     this.logText = this.add.text(40, logY - logH / 2 + 20, '', {
-      fontFamily: 'monospace', fontSize: mob ? '8px' : '9px', color: '#b8a888',
+      fontFamily: 'monospace', fontSize: mob ? '8px' : '9px', color: '#e8dcc8',
       lineSpacing: 3, wordWrap: { width: GAME_WIDTH - 80 },
     });
 
@@ -204,14 +204,14 @@ export class BattleScene extends Phaser.Scene {
       card.heatBar.fillColor = heatPct > 0.9 ? COLORS.meltdown : heatPct > 0.7 ? COLORS.rust2 : heatPct > 0.4 ? COLORS.warning : COLORS.copper;
 
       if (!snap.alive) {
-        card.nameText.setColor('#4a4236');
+        card.nameText.setColor('#6a5e50');
       }
     }
     for (const snap of enemySnaps) {
       const card = this.enemyCards.get(snap.id);
       if (!card) continue;
       card.hpBar.width = enemyBarW * Math.max(0, snap.hp / snap.maxHp);
-      if (!snap.alive) card.nameText.setColor('#4a4236');
+      if (!snap.alive) card.nameText.setColor('#6a5e50');
     }
   }
 
@@ -236,13 +236,13 @@ export class BattleScene extends Phaser.Scene {
     if (won) AudioManager.playVictory(); else AudioManager.playDefeat();
 
     this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 50, won ? 'VICTORY' : 'DEFEAT', {
-      fontFamily: 'monospace', fontSize: '24px',
+      fontFamily: 'monospace', fontSize: '28px',
       color: won ? '#4cae6e' : '#c0432e', letterSpacing: 6,
     }).setOrigin(0.5).setDepth(100);
 
     this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 20,
       `${this.result.totalTurns} turns — ${this.result.xpEarned} XP earned`, {
-      fontFamily: 'monospace', fontSize: '9px', color: '#7a6e5a', letterSpacing: 2,
+      fontFamily: 'monospace', fontSize: '13px', color: '#c8b89a', letterSpacing: 2,
     }).setOrigin(0.5).setDepth(100);
 
     // Distribute XP and check level ups
@@ -283,7 +283,7 @@ export class BattleScene extends Phaser.Scene {
 
       if (levelUps.length > 0) {
         this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 10, levelUps.join('\n'), {
-          fontFamily: 'monospace', fontSize: '9px', color: '#f0a84a',
+          fontFamily: 'monospace', fontSize: '13px', color: '#f0a84a',
           align: 'center', lineSpacing: 3,
         }).setOrigin(0.5).setDepth(100);
       }

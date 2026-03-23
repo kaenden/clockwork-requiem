@@ -19,7 +19,7 @@ export class ArchiveScene extends Phaser.Scene {
     const meta = metaState.get();
 
     this.add.text(cx, 30, 'AXIOM ARCHIVES', {
-      fontFamily: 'monospace', fontSize: '16px', color: '#f0a84a', letterSpacing: 4,
+      fontFamily: 'monospace', fontSize: '14px', color: '#f0a84a', letterSpacing: 4,
     }).setOrigin(0.5);
 
     // ── Stats Overview ──
@@ -38,47 +38,47 @@ export class ArchiveScene extends Phaser.Scene {
     let sy = statsY + 16;
     for (const [label, value] of statLines) {
       this.add.text(cx - 200, sy, label, {
-        fontFamily: 'monospace', fontSize: '9px', color: '#7a6e5a', letterSpacing: 2,
+        fontFamily: 'monospace', fontSize: '13px', color: '#c8b89a', letterSpacing: 2,
       });
       this.add.text(cx + 200, sy, value, {
-        fontFamily: 'monospace', fontSize: '9px', color: '#f0a84a', letterSpacing: 1,
+        fontFamily: 'monospace', fontSize: '13px', color: '#f0a84a', letterSpacing: 1,
       }).setOrigin(1, 0);
       sy += 18;
     }
 
     // ── Explosion Archive ──
     this.add.text(40, 220, 'EXPLOSION ARCHIVE', {
-      fontFamily: 'monospace', fontSize: '10px', color: '#c0432e', letterSpacing: 3,
+      fontFamily: 'monospace', fontSize: '14px', color: '#c0432e', letterSpacing: 3,
     });
 
     const explosions = meta.explosionArchive.slice(-15).reverse();
     if (explosions.length === 0) {
       this.add.text(40, 250, 'No explosions recorded yet.', {
-        fontFamily: 'monospace', fontSize: '9px', color: '#4a4236',
+        fontFamily: 'monospace', fontSize: '13px', color: '#6a5e50',
       });
     } else {
       // Table header
       let ey = 246;
-      this.add.text(40, ey, 'UNIT', { fontFamily: 'monospace', fontSize: '7px', color: '#7a6e5a', letterSpacing: 2 });
-      this.add.text(300, ey, 'ZONE', { fontFamily: 'monospace', fontSize: '7px', color: '#7a6e5a', letterSpacing: 2 });
-      this.add.text(500, ey, 'FLOOR', { fontFamily: 'monospace', fontSize: '7px', color: '#7a6e5a', letterSpacing: 2 });
-      this.add.text(600, ey, 'CAUSE', { fontFamily: 'monospace', fontSize: '7px', color: '#7a6e5a', letterSpacing: 2 });
+      this.add.text(40, ey, 'UNIT', { fontFamily: 'monospace', fontSize: '15px', color: '#c8b89a', letterSpacing: 2 });
+      this.add.text(300, ey, 'ZONE', { fontFamily: 'monospace', fontSize: '15px', color: '#c8b89a', letterSpacing: 2 });
+      this.add.text(500, ey, 'FLOOR', { fontFamily: 'monospace', fontSize: '15px', color: '#c8b89a', letterSpacing: 2 });
+      this.add.text(600, ey, 'CAUSE', { fontFamily: 'monospace', fontSize: '15px', color: '#c8b89a', letterSpacing: 2 });
       ey += 18;
 
       this.add.rectangle(cx, ey - 4, GAME_WIDTH - 80, 1, COLORS.border);
 
       for (const exp of explosions) {
         this.add.text(40, ey, exp.unitName, {
-          fontFamily: 'monospace', fontSize: '9px', color: '#c0432e',
+          fontFamily: 'monospace', fontSize: '13px', color: '#c0432e',
         });
         this.add.text(300, ey, ZONE_NAMES[exp.zone] ?? exp.zone, {
-          fontFamily: 'monospace', fontSize: '9px', color: '#b8a888',
+          fontFamily: 'monospace', fontSize: '13px', color: '#e8dcc8',
         });
         this.add.text(500, ey, `F${exp.floor}`, {
-          fontFamily: 'monospace', fontSize: '9px', color: '#b8a888',
+          fontFamily: 'monospace', fontSize: '13px', color: '#e8dcc8',
         });
         this.add.text(600, ey, exp.partThatCaused, {
-          fontFamily: 'monospace', fontSize: '9px', color: '#7a6e5a',
+          fontFamily: 'monospace', fontSize: '13px', color: '#c8b89a',
         });
         ey += 18;
       }
@@ -86,13 +86,13 @@ export class ArchiveScene extends Phaser.Scene {
 
     // ── Ascension Info ──
     this.add.text(40, GAME_HEIGHT - 100, 'ASCENSION PROTOCOL', {
-      fontFamily: 'monospace', fontSize: '10px', color: '#9b52d4', letterSpacing: 3,
+      fontFamily: 'monospace', fontSize: '14px', color: '#9b52d4', letterSpacing: 3,
     });
 
     const ascLevel = meta.ascensionLevel;
     if (ascLevel === 0) {
       this.add.text(40, GAME_HEIGHT - 74, 'Complete your first run to unlock Ascension.', {
-        fontFamily: 'monospace', fontSize: '9px', color: '#4a4236',
+        fontFamily: 'monospace', fontSize: '13px', color: '#6a5e50',
       });
     } else {
       const modifiers = [
@@ -103,13 +103,13 @@ export class ArchiveScene extends Phaser.Scene {
       ].filter(Boolean);
 
       this.add.text(40, GAME_HEIGHT - 74, `Level ${ascLevel}: ${modifiers.join(' | ')}`, {
-        fontFamily: 'monospace', fontSize: '9px', color: '#9b52d4',
+        fontFamily: 'monospace', fontSize: '13px', color: '#9b52d4',
       });
     }
 
     // Back
     this.add.text(40, GAME_HEIGHT - 28, '[ BACK TO MENU ]', {
-      fontFamily: 'monospace', fontSize: '10px', color: '#7a6e5a', letterSpacing: 2,
+      fontFamily: 'monospace', fontSize: '14px', color: '#c8b89a', letterSpacing: 2,
     }).setInteractive({ useHandCursor: true })
       .on('pointerdown', () => this.scene.start('Menu'));
   }

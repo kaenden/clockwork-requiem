@@ -108,9 +108,9 @@ export const COLORS = {
   soul:    0x6b2fa0,
   soul2:   0x9b52d4,
 
-  text:    0xe0d4bc,
-  text2:   0xb8a888,
-  text3:   0x7a6e5a,
+  text:    0xf0e8d8,
+  text2:   0xe0d4bc,
+  text3:   0xa89878,
 
   safe:    0x4cae6e,
   warning: 0xd4a82a,
