@@ -21,6 +21,9 @@ import { ArchiveScene } from '@/scenes/ArchiveScene';
 import { PvpMenuScene } from '@/scenes/PvpMenuScene';
 import { PvpBattleScene } from '@/scenes/PvpBattleScene';
 
+const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent)
+  || (window.innerWidth <= 800 && 'ontouchstart' in window);
+
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   width: GAME_WIDTH,
@@ -30,6 +33,12 @@ const config: Phaser.Types.Core.GameConfig = {
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
+    width: GAME_WIDTH,
+    height: GAME_HEIGHT,
+  },
+  input: {
+    activePointers: 3,
+    touch: { capture: true },
   },
   scene: [
     BootScene,
@@ -55,4 +64,13 @@ const config: Phaser.Types.Core.GameConfig = {
   ],
 };
 
-new Phaser.Game(config);
+const game = new Phaser.Game(config);
+
+// Prevent pull-to-refresh and bounce on mobile
+document.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+
+// Handle orientation / resize
+window.addEventListener('resize', () => {
+  game.scale.resize(GAME_WIDTH, GAME_HEIGHT);
+  game.scale.refresh();
+});

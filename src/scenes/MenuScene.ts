@@ -4,6 +4,7 @@ import { SaveManager } from '@/utils/SaveManager';
 import { runState } from '@/state/RunStateManager';
 import { metaState } from '@/state/MetaStateManager';
 import { AudioManager } from '@/systems/AudioManager';
+import { isMobile, fontSize } from '@/utils/Mobile';
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -17,16 +18,21 @@ export class MenuScene extends Phaser.Scene {
     const cx = GAME_WIDTH / 2;
 
     // Title
-    this.add.text(cx, 140, 'CLOCKWORK', {
-      fontFamily: 'monospace', fontSize: '48px', color: '#f0a84a', letterSpacing: 8,
+    const mob = isMobile();
+    const titleSize = mob ? '32px' : '48px';
+    const titleY1 = mob ? 120 : 140;
+    const titleY2 = mob ? 165 : 200;
+
+    this.add.text(cx, titleY1, 'CLOCKWORK', {
+      fontFamily: 'monospace', fontSize: titleSize, color: '#f0a84a', letterSpacing: mob ? 4 : 8,
     }).setOrigin(0.5);
 
-    this.add.text(cx, 200, 'REQUIEM', {
-      fontFamily: 'monospace', fontSize: '48px', color: '#f0a84a', letterSpacing: 8,
+    this.add.text(cx, titleY2, 'REQUIEM', {
+      fontFamily: 'monospace', fontSize: titleSize, color: '#f0a84a', letterSpacing: mob ? 4 : 8,
     }).setOrigin(0.5);
 
-    this.add.text(cx, 250, 'ROGUELITE  AUTOBATTLER', {
-      fontFamily: 'monospace', fontSize: '10px', color: '#7a6e5a', letterSpacing: 5,
+    this.add.text(cx, titleY2 + 40, 'ROGUELITE  AUTOBATTLER', {
+      fontFamily: 'monospace', fontSize: fontSize(10), color: '#7a6e5a', letterSpacing: mob ? 2 : 5,
     }).setOrigin(0.5);
 
     // Menu buttons
@@ -41,13 +47,15 @@ export class MenuScene extends Phaser.Scene {
       { label: 'ARCHIVES', callback: () => this.scene.start('Archive') },
     ];
 
-    let y = 300;
+    let y = mob ? 260 : 300;
+    const btnFontSize = mob ? '16px' : '14px';
+    const btnSpacing = mob ? 48 : 44;
     for (const def of buttonDefs) {
       const enabled = def.enabled !== false;
       const btn = this.add.text(cx, y, def.label, {
-        fontFamily: 'monospace', fontSize: '14px',
+        fontFamily: 'monospace', fontSize: btnFontSize,
         color: enabled ? '#e0d4bc' : '#4a4236',
-        letterSpacing: 4, padding: { x: 20, y: 8 },
+        letterSpacing: mob ? 2 : 4, padding: { x: 24, y: 12 },
       }).setOrigin(0.5);
 
       if (enabled) {
@@ -57,7 +65,7 @@ export class MenuScene extends Phaser.Scene {
           .on('pointerdown', def.callback);
       }
 
-      y += 44;
+      y += btnSpacing;
     }
 
     // Meta summary at bottom

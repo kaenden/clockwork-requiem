@@ -4,6 +4,7 @@ import type { PowerSource } from '@/types';
 import { runState } from '@/state/RunStateManager';
 import { metaState } from '@/state/MetaStateManager';
 import { UnitFactory } from '@/entities/UnitFactory';
+import { isMobile, addTouchScroll } from '@/utils/Mobile';
 
 export class RunStartScene extends Phaser.Scene {
   constructor() {
@@ -33,21 +34,37 @@ export class RunStartScene extends Phaser.Scene {
       { key: 'soul',     label: 'SOUL',     desc: 'Unpredictable, powerful.\nHighest ceiling — highest risk.', color: COLORS.soul2 },
     ];
 
-    const cardW = 280;
-    const gap = 30;
-    const totalW = sources.length * cardW + (sources.length - 1) * gap;
-    let startX = cx - totalW / 2 + cardW / 2;
+    const mob = isMobile();
+    const cardW = mob ? GAME_WIDTH - 60 : 280;
+    const gap = mob ? 16 : 30;
+    const container = this.add.container(0, 0);
 
+    // Mobile: stack vertically; Desktop: side by side
+    let startX: number;
+    let startY: number;
+    if (mob) {
+      startX = cx;
+      startY = 130;
+    } else {
+      const totalW = sources.length * cardW + (sources.length - 1) * gap;
+      startX = cx - totalW / 2 + cardW / 2;
+      startY = 340;
+    }
+
+    let cardIndex = 0;
     for (const src of sources) {
-      const x = startX;
-      const y = 340;
+      const x = mob ? startX : startX + cardIndex * (cardW + gap);
+      const y = mob ? startY + cardIndex * (260 + gap) : startY;
+      cardIndex++;
+
+      const cardH = mob ? 240 : 360;
 
       // Card background
-      const card = this.add.rectangle(x, y, cardW, 360, COLORS.surface)
+      const card = this.add.rectangle(x, y, cardW, cardH, COLORS.surface)
         .setStrokeStyle(1, COLORS.border);
 
       // Color accent bar
-      this.add.rectangle(x - cardW / 2 + 2, y, 3, 360, src.color);
+      this.add.rectangle(x - cardW / 2 + 2, y, 3, cardH, src.color);
 
       // Title
       this.add.text(x, y - 140, src.label, {
@@ -92,9 +109,9 @@ export class RunStartScene extends Phaser.Scene {
       }
 
       // Select button
-      const btn = this.add.text(x, y + 140, '[ SELECT ]', {
+      const btn = this.add.text(x, y + (mob ? 90 : 140), '[ SELECT ]', {
         fontFamily: 'monospace',
-        fontSize: '12px',
+        fontSize: mob ? '14px' : '12px',
         color: '#e0d4bc',
         letterSpacing: 2,
       }).setOrigin(0.5)
@@ -108,8 +125,15 @@ export class RunStartScene extends Phaser.Scene {
           card.setStrokeStyle(1, COLORS.border);
         })
         .on('pointerdown', () => this.selectPower(src.key));
+    }
 
-      startX += cardW + gap;
+    // Mobile scroll support for vertically stacked cards
+    if (mob) {
+      const totalH = sources.length * (260 + gap) + 130;
+      const maxScroll = Math.max(0, totalH - GAME_HEIGHT);
+      if (maxScroll > 0) {
+        addTouchScroll(this, container, maxScroll);
+      }
     }
   }
 

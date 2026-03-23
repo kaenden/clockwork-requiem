@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '@/data/constants';
 import { metaState } from '@/state/MetaStateManager';
 import { PART_POOL } from '@/data/parts';
+import { addTouchScroll } from '@/utils/Mobile';
 
 const RARITY_COLORS: Record<string, string> = {
   common: '#aaaaaa', uncommon: '#4cae6e', rare: '#2aa8d4',
@@ -98,13 +99,10 @@ export class SchemaBookScene extends Phaser.Scene {
       y += 10;
     }
 
-    // Scroll support
+    // Scroll support (mouse wheel + touch drag)
     const maxScroll = Math.max(0, y - GAME_HEIGHT + 60);
     this.scrollY = 0;
-    this.input.on('wheel', (_pointer: any, _over: any, _dx: number, dy: number) => {
-      this.scrollY = Phaser.Math.Clamp(this.scrollY + dy * 0.5, 0, maxScroll);
-      container.y = -this.scrollY;
-    });
+    addTouchScroll(this, container, maxScroll);
 
     // Back
     this.add.text(40, GAME_HEIGHT - 28, '[ BACK TO MENU ]', {

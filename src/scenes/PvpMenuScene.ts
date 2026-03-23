@@ -4,6 +4,7 @@ import { metaState } from '@/state/MetaStateManager';
 import { runState } from '@/state/RunStateManager';
 import { PvpManager, type PvpSnapshot } from '@/systems/PvpManager';
 import { AudioManager } from '@/systems/AudioManager';
+import { addTouchScroll } from '@/utils/Mobile';
 
 export class PvpMenuScene extends Phaser.Scene {
   private scrollY = 0;
@@ -112,10 +113,7 @@ export class PvpMenuScene extends Phaser.Scene {
     // Scroll
     const maxScroll = Math.max(0, y - GAME_HEIGHT + 100);
     this.scrollY = 0;
-    this.input.on('wheel', (_pointer: any, _over: any, _dx: number, dy: number) => {
-      this.scrollY = Phaser.Math.Clamp(this.scrollY + dy * 0.5, 0, maxScroll);
-      container.y = -this.scrollY;
-    });
+    addTouchScroll(this, container, maxScroll);
 
     // ── Leaderboard sidebar ──
     this.add.text(GAME_WIDTH - 260, 125, 'LEADERBOARD', {
