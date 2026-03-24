@@ -6,6 +6,7 @@ import { AudioManager } from '@/systems/AudioManager';
 import { fadeIn } from '@/ui/SceneTransition';
 import { createButton, drawHeatMeter, FONT, powerColor } from '@/ui/UIKit';
 import { isMobile } from '@/utils/Mobile';
+import { ROOM_DESCRIPTIONS } from '@/data/roomEvents';
 import type { MapNode } from '@/types';
 
 const ZONE_NAMES: Record<string, string> = {
@@ -87,6 +88,32 @@ export class MapScene extends Phaser.Scene {
 
       hx -= 44;
     }
+
+    // ── Run progress bar ──
+    const mapNodes = runState.get().map;
+    const cleared = mapNodes.filter(n => n.cleared).length;
+    const total = mapNodes.length;
+    const progPct = total > 0 ? cleared / total : 0;
+    const progW = mob ? GAME_WIDTH - 40 : 300;
+    this.add.rectangle(cx, GAME_HEIGHT - 60, progW, 6, COLORS.border);
+    this.add.rectangle(cx - progW / 2, GAME_HEIGHT - 60, progW * progPct, 6, zoneColor).setOrigin(0, 0.5);
+    this.add.text(cx, GAME_HEIGHT - 72, `PROGRESS: ${cleared}/${total} ROOMS  |  CONSCIOUSNESS: ${state.consciousnessScore}`, {
+      fontFamily: 'monospace', fontSize: '10px', color: '#c8b89a', letterSpacing: 1,
+    }).setOrigin(0.5);
+
+    // ── Room tooltip (shown on hover) ──
+    const tooltip = this.add.container(0, 0).setVisible(false).setDepth(500);
+    const ttBg = this.add.rectangle(0, 0, 280, 100, 0x121110, 0.95).setStrokeStyle(1, COLORS.border);
+    const ttTitle = this.add.text(0, -34, '', { fontFamily: 'monospace', fontSize: '12px', color: '#f5c563', letterSpacing: 2 }).setOrigin(0.5);
+    const ttDesc = this.add.text(0, -14, '', { fontFamily: 'monospace', fontSize: '10px', color: '#e8dcc8', align: 'center', wordWrap: { width: 260 } }).setOrigin(0.5);
+    const ttRisk = this.add.text(-60, 14, '', { fontFamily: 'monospace', fontSize: '9px', color: '#c0432e' });
+    const ttReward = this.add.text(-60, 28, '', { fontFamily: 'monospace', fontSize: '9px', color: '#4cae6e' });
+    tooltip.add([ttBg, ttTitle, ttDesc, ttRisk, ttReward]);
+    this.data.set('tooltip', tooltip);
+    this.data.set('ttTitle', ttTitle);
+    this.data.set('ttDesc', ttDesc);
+    this.data.set('ttRisk', ttRisk);
+    this.data.set('ttReward', ttReward);
 
     // ── Draw map ──
     this.drawMap(runState.get().map, zoneColor);
@@ -170,6 +197,21 @@ export class MapScene extends Phaser.Scene {
             ring.lineStyle(2, roomInfo.color, 1);
             ring.strokeCircle(0, 0, radius);
             icon.setScale(1.15);
+            // Show tooltip
+            const tt = this.data.get('tooltip') as Phaser.GameObjects.Container;
+            const info = ROOM_DESCRIPTIONS[node.type];
+            if (tt && info) {
+              (this.data.get('ttTitle') as Phaser.GameObjects.Text).setText(info.name);
+              (this.data.get('ttDesc') as Phaser.GameObjects.Text).setText(info.desc);
+              (this.data.get('ttRisk') as Phaser.GameObjects.Text).setText(`RISK: ${info.risk}`);
+              (this.data.get('ttReward') as Phaser.GameObjects.Text).setText(`REWARD: ${info.reward}`);
+              tt.setPosition(node.x, node.y - radius - 65);
+              // Keep tooltip on screen
+              if (tt.y < 50) tt.y = node.y + radius + 65;
+              if (tt.x < 150) tt.x = 150;
+              if (tt.x > GAME_WIDTH - 150) tt.x = GAME_WIDTH - 150;
+              tt.setVisible(true);
+            }
           })
           .on('pointerout', () => {
             ring.clear();
@@ -178,6 +220,8 @@ export class MapScene extends Phaser.Scene {
             ring.lineStyle(2, roomInfo.color, 1);
             ring.strokeCircle(0, 0, radius);
             icon.setScale(1);
+            const tt = this.data.get('tooltip') as Phaser.GameObjects.Container;
+            if (tt) tt.setVisible(false);
           })
           .on('pointerdown', () => this.enterRoom(node));
       }
