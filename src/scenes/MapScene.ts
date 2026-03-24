@@ -44,6 +44,7 @@ export class MapScene extends Phaser.Scene {
     fadeIn(this);
     this.nodeSprites.clear();
     const mob = isMobile();
+    const cx = GAME_WIDTH / 2;
     const state = runState.get();
 
     if (state.map.length === 0) {

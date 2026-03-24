@@ -4,7 +4,9 @@ import type { PowerSource } from '@/types';
 import { runState } from '@/state/RunStateManager';
 import { metaState } from '@/state/MetaStateManager';
 import { UnitFactory } from '@/entities/UnitFactory';
-import { isMobile, addTouchScroll } from '@/utils/Mobile';
+import { isMobile } from '@/utils/Mobile';
+import { createButton } from '@/ui/UIKit';
+import { fadeIn } from '@/ui/SceneTransition';
 
 export class RunStartScene extends Phaser.Scene {
   constructor() {
@@ -12,20 +14,16 @@ export class RunStartScene extends Phaser.Scene {
   }
 
   create(): void {
+    fadeIn(this);
     const cx = GAME_WIDTH / 2;
+    const mob = isMobile();
 
-    this.add.text(cx, 60, 'SELECT POWER SOURCE', {
-      fontFamily: 'monospace',
-      fontSize: '14px',
-      color: '#f0a84a',
-      letterSpacing: 4,
+    this.add.text(cx, mob ? 20 : 40, 'SELECT POWER SOURCE', {
+      fontFamily: 'monospace', fontSize: '16px', color: '#f5c563', letterSpacing: 4,
     }).setOrigin(0.5);
 
-    this.add.text(cx, 90, 'This choice defines your run', {
-      fontFamily: 'monospace',
-      fontSize: '14px',
-      color: '#c8b89a',
-      letterSpacing: 2,
+    this.add.text(cx, mob ? 42 : 65, 'This choice defines your entire run', {
+      fontFamily: 'monospace', fontSize: '12px', color: '#c8b89a', letterSpacing: 1,
     }).setOrigin(0.5);
 
     const sources: { key: PowerSource; label: string; desc: string; color: number }[] = [
@@ -34,105 +32,97 @@ export class RunStartScene extends Phaser.Scene {
       { key: 'soul',     label: 'SOUL',     desc: 'Unpredictable, powerful.\nHighest ceiling — highest risk.', color: COLORS.soul2 },
     ];
 
-    const mob = isMobile();
-    const cardW = mob ? GAME_WIDTH - 60 : 280;
-    const gap = mob ? 16 : 30;
-    const container = this.add.container(0, 0);
-
-    // Mobile: stack vertically; Desktop: side by side
-    let startX: number;
-    let startY: number;
     if (mob) {
-      startX = cx;
-      startY = 130;
-    } else {
-      const totalW = sources.length * cardW + (sources.length - 1) * gap;
-      startX = cx - totalW / 2 + cardW / 2;
-      startY = 340;
-    }
+      // Mobile: horizontal compact cards
+      const cardW = (GAME_WIDTH - 30) / 3 - 4;
+      sources.forEach((src, i) => {
+        const x = 15 + cardW / 2 + i * (cardW + 6);
+        const y = GAME_HEIGHT / 2 - 20;
+        const colorStr = '#' + src.color.toString(16).padStart(6, '0');
 
-    let cardIndex = 0;
-    for (const src of sources) {
-      const x = mob ? startX : startX + cardIndex * (cardW + gap);
-      const y = mob ? startY + cardIndex * (260 + gap) : startY;
-      cardIndex++;
+        this.add.rectangle(x, y, cardW, 340, COLORS.surface).setStrokeStyle(1, COLORS.border);
+        this.add.rectangle(x - cardW / 2 + 2, y, 3, 340, src.color);
 
-      const cardH = mob ? 240 : 360;
+        this.add.text(x, y - 140, src.label, {
+          fontFamily: 'monospace', fontSize: '14px', color: colorStr, letterSpacing: 2,
+        }).setOrigin(0.5);
 
-      // Card background
-      const card = this.add.rectangle(x, y, cardW, cardH, COLORS.surface)
-        .setStrokeStyle(1, COLORS.border);
+        this.add.text(x, y - 100, src.desc, {
+          fontFamily: 'monospace', fontSize: '10px', color: '#e8dcc8',
+          align: 'center', lineSpacing: 3, wordWrap: { width: cardW - 16 },
+        }).setOrigin(0.5);
 
-      // Color accent bar
-      this.add.rectangle(x - cardW / 2 + 2, y, 3, cardH, src.color);
+        const stats = BASE_STATS[src.key];
+        const statList = [
+          { l: 'HP', v: stats.hp },
+          { l: 'ATK', v: stats.atk },
+          { l: 'SPD', v: stats.spd },
+          { l: 'THRESH', v: stats.thresh },
+        ];
+        let sy = y - 40;
+        for (const s of statList) {
+          this.add.text(x - cardW / 2 + 8, sy, `${s.l}: ${s.v}`, {
+            fontFamily: 'monospace', fontSize: '10px', color: '#c8b89a',
+          });
+          sy += 20;
+        }
 
-      // Title
-      this.add.text(x, y - 140, src.label, {
-        fontFamily: 'monospace',
-        fontSize: '14px',
-        color: '#' + src.color.toString(16).padStart(6, '0'),
-        letterSpacing: 4,
-      }).setOrigin(0.5);
-
-      // Description
-      this.add.text(x, y - 80, src.desc, {
-        fontFamily: 'monospace',
-        fontSize: '15px',
-        color: '#e8dcc8',
-        align: 'center',
-        lineSpacing: 4,
-      }).setOrigin(0.5);
-
-      // Stats preview
-      const stats = BASE_STATS[src.key];
-      const statNames: { key: string; label: string; val: number }[] = [
-        { key: 'hp', label: 'HP', val: stats.hp },
-        { key: 'atk', label: 'ATK', val: stats.atk },
-        { key: 'spd', label: 'SPD', val: stats.spd },
-        { key: 'thresh', label: 'HEAT RES', val: stats.thresh },
-      ];
-
-      let sy = y - 20;
-      for (const s of statNames) {
-        this.add.text(x - 100, sy, s.label, {
-          fontFamily: 'monospace', fontSize: '13px', color: '#c8b89a',
+        createButton(this, x, y + 120, 'SELECT', () => this.selectPower(src.key), {
+          color: src.color, width: cardW - 16,
         });
-        this.add.text(x + 100, sy, String(s.val), {
-          fontFamily: 'monospace', fontSize: '13px', color: '#e8dcc8',
-        }).setOrigin(1, 0);
+      });
+    } else {
+      // Desktop: wide cards side by side
+      const cardW = 280;
+      const gap = 30;
+      const totalW = sources.length * cardW + (sources.length - 1) * gap;
+      let startX = cx - totalW / 2 + cardW / 2;
 
-        // Bar
-        const barW = 140;
-        this.add.rectangle(x - 10, sy + 6, barW, 3, COLORS.border).setOrigin(0, 0.5);
-        this.add.rectangle(x - 10, sy + 6, barW * (s.val / 100), 3, src.color).setOrigin(0, 0.5);
-        sy += 28;
-      }
+      for (const src of sources) {
+        const x = startX;
+        const y = 340;
+        const colorStr = '#' + src.color.toString(16).padStart(6, '0');
 
-      // Select button
-      const btn = this.add.text(x, y + (mob ? 90 : 140), '[ SELECT ]', {
-        fontFamily: 'monospace',
-        fontSize: mob ? '14px' : '12px',
-        color: '#f0e8d8',
-        letterSpacing: 2,
-      }).setOrigin(0.5)
-        .setInteractive({ useHandCursor: true })
-        .on('pointerover', () => {
-          btn.setColor('#' + src.color.toString(16).padStart(6, '0'));
-          card.setStrokeStyle(2, src.color);
-        })
-        .on('pointerout', () => {
-          btn.setColor('#f0e8d8');
-          card.setStrokeStyle(1, COLORS.border);
-        })
-        .on('pointerdown', () => this.selectPower(src.key));
-    }
+        this.add.rectangle(x, y, cardW, 360, COLORS.surface).setStrokeStyle(1, COLORS.border);
+        this.add.rectangle(x - cardW / 2 + 2, y, 3, 360, src.color);
 
-    // Mobile scroll support for vertically stacked cards
-    if (mob) {
-      const totalH = sources.length * (260 + gap) + 130;
-      const maxScroll = Math.max(0, totalH - GAME_HEIGHT);
-      if (maxScroll > 0) {
-        addTouchScroll(this, container, maxScroll);
+        this.add.text(x, y - 140, src.label, {
+          fontFamily: 'monospace', fontSize: '18px', color: colorStr, letterSpacing: 4,
+        }).setOrigin(0.5);
+
+        this.add.text(x, y - 90, src.desc, {
+          fontFamily: 'monospace', fontSize: '12px', color: '#e8dcc8',
+          align: 'center', lineSpacing: 4,
+        }).setOrigin(0.5);
+
+        const stats = BASE_STATS[src.key];
+        const statNames = [
+          { l: 'HP', v: stats.hp },
+          { l: 'ATK', v: stats.atk },
+          { l: 'SPD', v: stats.spd },
+          { l: 'HEAT RES', v: stats.thresh },
+        ];
+
+        let sy = y - 20;
+        for (const s of statNames) {
+          this.add.text(x - 100, sy, s.l, {
+            fontFamily: 'monospace', fontSize: '11px', color: '#c8b89a',
+          });
+          this.add.text(x + 100, sy, String(s.v), {
+            fontFamily: 'monospace', fontSize: '11px', color: '#e8dcc8',
+          }).setOrigin(1, 0);
+
+          const barW = 140;
+          this.add.rectangle(x - 10, sy + 7, barW, 3, COLORS.border).setOrigin(0, 0.5);
+          this.add.rectangle(x - 10, sy + 7, barW * (s.v / 100), 3, src.color).setOrigin(0, 0.5);
+          sy += 28;
+        }
+
+        createButton(this, x, y + 140, 'SELECT', () => this.selectPower(src.key), {
+          color: src.color, width: 200,
+        });
+
+        startX += cardW + gap;
       }
     }
   }
