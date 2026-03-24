@@ -119,8 +119,14 @@ export class MapScene extends Phaser.Scene {
     // ── Draw map ──
     this.drawMap(runState.get().map, zoneColor);
 
-    // ── Team button ──
-    createButton(this, mob ? GAME_WIDTH / 2 : GAME_WIDTH - 80, GAME_HEIGHT - 28, 'TEAM', () => {
+    // ── Bottom buttons ──
+    const invCount = runState.getInventory().length;
+    createButton(this, mob ? GAME_WIDTH / 4 : GAME_WIDTH - 220, GAME_HEIGHT - 28,
+      `INVENTORY (${invCount})`, () => {
+      this.scene.start('Inventory');
+    }, { color: COLORS.elec2, width: mob ? GAME_WIDTH / 2 - 16 : 140 });
+
+    createButton(this, mob ? GAME_WIDTH * 3 / 4 : GAME_WIDTH - 70, GAME_HEIGHT - 28, 'TEAM', () => {
       this.scene.start('Team');
     }, { color: COLORS.copper, width: mob ? GAME_WIDTH - 40 : 120 });
   }

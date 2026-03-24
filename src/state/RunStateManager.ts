@@ -1,8 +1,9 @@
-import type { RunState, UnitConfig, MapNode, Zone, Directive } from '@/types';
+import type { RunState, UnitConfig, MapNode, Zone, Directive, Part } from '@/types';
 import { eventBus } from '@/utils/EventBus';
 
 const DEFAULT_RUN: RunState = {
   units: [],
+  inventory: [],
   map: [],
   currentNodeId: null,
   zone: 'boiler_works',
@@ -80,6 +81,24 @@ class RunStateManager {
 
   addConsciousness(amount: number): void {
     this.state.consciousnessScore += amount;
+  }
+
+  // ── Inventory ──
+  addToInventory(part: Part): void {
+    this.state.inventory.push(part);
+    eventBus.emit('run:inventory_add', part);
+  }
+
+  removeFromInventory(partId: string): Part | undefined {
+    const idx = this.state.inventory.findIndex(p => p.id === partId);
+    if (idx === -1) return undefined;
+    const [part] = this.state.inventory.splice(idx, 1);
+    eventBus.emit('run:inventory_remove', part);
+    return part;
+  }
+
+  getInventory(): Part[] {
+    return this.state.inventory;
   }
 
   setDirective(unitId: string, directive: Directive): void {

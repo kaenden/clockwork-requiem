@@ -1,28 +1,20 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT, COLORS, COMPAT_HEAT } from '@/data/constants';
+import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '@/data/constants';
 import { runState } from '@/state/RunStateManager';
 import { metaState } from '@/state/MetaStateManager';
 import { LootGenerator } from '@/systems/LootGenerator';
-import { getCompatibility, effectiveHeatCost, canEquipPart, computeStats } from '@/systems/StatEngine';
-import { SaveManager } from '@/utils/SaveManager';
 import { AudioManager } from '@/systems/AudioManager';
-import type { Part, RoomType, Zone, UnitConfig } from '@/types';
-
-const RARITY_COLORS: Record<string, string> = {
-  common: '#aaaaaa',
-  uncommon: '#4cae6e',
-  rare: '#2aa8d4',
-  epic: '#9b52d4',
-  legendary: '#f0a84a',
-  kenet: '#c0432e',
-};
+import { SaveManager } from '@/utils/SaveManager';
+import { fadeIn } from '@/ui/SceneTransition';
+import { createButton, rarityColor } from '@/ui/UIKit';
+import { isMobile } from '@/utils/Mobile';
+import type { Part, RoomType, Zone } from '@/types';
 
 export class SalvageScene extends Phaser.Scene {
   private loot: Part[] = [];
-  private selectedUnit: UnitConfig | null = null;
+  private collected: Set<string> = new Set();
   private sceneData: {
-    roomType: RoomType;
-    zone: Zone;
+    roomType: RoomType; zone: Zone;
     splitPending?: { unitId: string; splitType: 'body' | 'weapon' } | null;
     nextScene?: string;
   } = { roomType: 'battle', zone: 'boiler_works' };
@@ -34,213 +26,141 @@ export class SalvageScene extends Phaser.Scene {
   init(data: { roomType: RoomType; zone?: Zone; splitPending?: any; nextScene?: string }): void {
     const zone = (data.zone ?? runState.get().zone) as Zone;
     this.sceneData = {
-      roomType: data.roomType,
-      zone,
+      roomType: data.roomType, zone,
       splitPending: data.splitPending ?? null,
       nextScene: data.nextScene,
     };
-    // Only generate loot once (not on unit switch restart)
-    if (this.loot.length === 0 || !data.roomType) {
+    if (this.loot.length === 0) {
       this.loot = LootGenerator.generate(zone, data.roomType);
     }
-    this.selectedUnit = null;
+    this.collected = new Set();
   }
 
   create(): void {
     AudioManager.setMode('salvage');
-    this.add.text(GAME_WIDTH / 2, 30, 'SALVAGE STATION', {
-      fontFamily: 'monospace', fontSize: '14px', color: '#f0a84a', letterSpacing: 4,
+    fadeIn(this);
+    const mob = isMobile();
+    const cx = GAME_WIDTH / 2;
+
+    // Header
+    this.add.rectangle(cx, 0, GAME_WIDTH, 50, COLORS.copper, 0.06).setOrigin(0.5, 0);
+    this.add.text(cx, 12, 'SALVAGE STATION', {
+      fontFamily: 'monospace', fontSize: '16px', color: '#f5c563', letterSpacing: 4,
+    }).setOrigin(0.5);
+    this.add.text(cx, 34, 'Collect parts to your INVENTORY — equip them from the TEAM screen', {
+      fontFamily: 'monospace', fontSize: '10px', color: '#c8b89a',
     }).setOrigin(0.5);
 
-    this.add.text(GAME_WIDTH / 2, 54, 'Choose parts to integrate — each carries a heat cost', {
-      fontFamily: 'monospace', fontSize: '13px', color: '#c8b89a', letterSpacing: 2,
-    }).setOrigin(0.5);
+    // Inventory count
+    const inv = runState.getInventory();
+    this.add.text(GAME_WIDTH - 20, 60, `INVENTORY: ${inv.length} parts`, {
+      fontFamily: 'monospace', fontSize: '10px', color: '#a89878',
+    }).setOrigin(1, 0);
 
-    // ── Unit selector (top) ──
-    const units = runState.get().units.filter(u => u.alive);
-    this.add.text(40, 80, 'ASSIGN TO:', {
-      fontFamily: 'monospace', fontSize: '14px', color: '#c8b89a', letterSpacing: 2,
-    });
-
-    let ux = 130;
-    for (const unit of units) {
-      const btn = this.add.text(ux, 80, unit.name, {
-        fontFamily: 'monospace', fontSize: '14px',
-        color: unit.isAxiom ? '#f0a84a' : '#b8a888',
-        letterSpacing: 1,
-        backgroundColor: '#1a1815',
-        padding: { x: 8, y: 4 },
-      }).setInteractive({ useHandCursor: true })
-        .on('pointerdown', () => {
-          this.selectedUnit = unit;
-          // Re-render without regenerating loot
-          this.scene.restart({
-            roomType: this.sceneData.roomType,
-            zone: this.sceneData.zone,
-            splitPending: this.sceneData.splitPending,
-            nextScene: this.sceneData.nextScene,
-          });
-        });
-
-      if (this.selectedUnit?.id === unit.id) {
-        btn.setBackgroundColor('#2a2620');
-      }
-
-      ux += btn.width + 16;
-    }
-
-    // Default to first unit
-    if (!this.selectedUnit && units.length > 0) {
-      this.selectedUnit = units[0];
-    }
-
-    // Show selected unit stats
-    if (this.selectedUnit) {
-      const u = this.selectedUnit;
-      const heatPct = u.stats.thresh > 0 ? Math.round((u.stats.heat / u.stats.thresh) * 100) : 0;
-      this.add.text(40, 108, `${u.name} — HP:${u.stats.hp}/${u.stats.maxHp}  ATK:${u.stats.atk}  DEF:${u.stats.def}  SPD:${u.stats.spd}  HEAT:${heatPct}%  THRESH:${u.stats.thresh}`, {
-        fontFamily: 'monospace', fontSize: '13px', color: '#e8dcc8', letterSpacing: 1,
-      });
-    }
-
-    // ── Part cards ──
-    const cardW = Math.min(280, (GAME_WIDTH - 80 - (this.loot.length - 1) * 16) / this.loot.length);
-    const totalW = this.loot.length * cardW + (this.loot.length - 1) * 16;
-    let px = GAME_WIDTH / 2 - totalW / 2 + cardW / 2;
+    // Part cards
+    const cardW = mob ? (GAME_WIDTH - 30) / this.loot.length - 4 : Math.min(300, (GAME_WIDTH - 60) / this.loot.length - 8);
+    const totalW = this.loot.length * (cardW + 8);
+    let px = cx - totalW / 2 + cardW / 2 + 4;
 
     for (const part of this.loot) {
-      const cy = 340;
-      const rarityColor = RARITY_COLORS[part.rarity] ?? '#aaaaaa';
+      const cy = mob ? GAME_HEIGHT / 2 - 30 : GAME_HEIGHT / 2 - 40;
+      const cardH = mob ? 320 : 380;
+      const rc = rarityColor(part.rarity);
+      const rcNum = parseInt(rc.replace('#', ''), 16);
+      const already = this.collected.has(part.id);
 
       // Card bg
-      this.add.rectangle(px, cy, cardW, 340, COLORS.surface)
-        .setStrokeStyle(1, COLORS.border);
-
-      // Rarity accent
-      this.add.rectangle(px - cardW / 2 + 2, cy, 3, 340,
-        parseInt(rarityColor.replace('#', ''), 16));
+      this.add.rectangle(px, cy, cardW, cardH, COLORS.surface)
+        .setStrokeStyle(1, already ? COLORS.border : rcNum, already ? 0.3 : 0.6);
+      this.add.rectangle(px - cardW / 2 + 2, cy, 3, cardH, already ? COLORS.border : rcNum, already ? 0.3 : 1);
 
       // Part name
-      this.add.text(px, cy - 140, part.name, {
-        fontFamily: 'monospace', fontSize: '15px', color: rarityColor, letterSpacing: 1,
+      this.add.text(px, cy - cardH / 2 + 18, part.name, {
+        fontFamily: 'monospace', fontSize: '13px', color: already ? '#6a5e50' : rc, letterSpacing: 1,
       }).setOrigin(0.5);
 
-      // Rarity + category
-      this.add.text(px, cy - 118, `${part.rarity.toUpperCase()} — ${part.category.replace(/_/g, ' ').toUpperCase()}`, {
-        fontFamily: 'monospace', fontSize: '15px', color: '#c8b89a', letterSpacing: 1,
+      // Rarity + Category
+      this.add.text(px, cy - cardH / 2 + 36, `${part.rarity.toUpperCase()} — ${part.category.replace(/_/g, ' ').toUpperCase()}`, {
+        fontFamily: 'monospace', fontSize: '9px', color: already ? '#6a5e50' : '#c8b89a', letterSpacing: 1,
       }).setOrigin(0.5);
 
       // Power source
       const srcColors: Record<string, string> = { steam: '#e8913a', electric: '#2aa8d4', soul: '#9b52d4' };
-      this.add.text(px, cy - 98, part.powerSource.toUpperCase(), {
-        fontFamily: 'monospace', fontSize: '14px',
-        color: srcColors[part.powerSource] ?? '#7a6e5a', letterSpacing: 2,
+      this.add.text(px, cy - cardH / 2 + 54, part.powerSource.toUpperCase(), {
+        fontFamily: 'monospace', fontSize: '10px',
+        color: already ? '#6a5e50' : (srcColors[part.powerSource] ?? '#c8b89a'), letterSpacing: 2,
       }).setOrigin(0.5);
 
       // Stat mods
-      let sy = cy - 70;
+      let sy = cy - cardH / 2 + 80;
       for (const mod of part.statMods) {
         const sign = mod.value >= 0 ? '+' : '';
-        const color = mod.value >= 0 ? '#4cae6e' : '#c0432e';
+        const color = already ? '#6a5e50' : mod.value >= 0 ? '#4cae6e' : '#c0432e';
         this.add.text(px, sy, `${mod.stat.toUpperCase()} ${sign}${mod.value}`, {
-          fontFamily: 'monospace', fontSize: '14px', color, letterSpacing: 1,
+          fontFamily: 'monospace', fontSize: '13px', color, letterSpacing: 1,
         }).setOrigin(0.5);
-        sy += 20;
+        sy += 22;
       }
 
-      // Heat cost display
-      if (this.selectedUnit) {
-        const cost = effectiveHeatCost(part, this.selectedUnit);
-        const compat = this.selectedUnit.isAxiom ? 'full' : getCompatibility(part.powerSource, this.selectedUnit.powerSource);
-        const compatLabel = compat === 'full' ? 'FULL MATCH' : compat === 'partial' ? 'PARTIAL (+20%)' : 'CONFLICT (+50%)';
-        const compatColor = compat === 'full' ? '#4cae6e' : compat === 'partial' ? '#d4a82a' : '#c0432e';
+      // Heat cost
+      const costColor = part.heatCost > 0 ? '#c0432e' : '#4cae6e';
+      this.add.text(px, sy + 8, `HEAT COST: ${part.heatCost > 0 ? '-' : '+'}${Math.abs(part.heatCost)} THRESH`, {
+        fontFamily: 'monospace', fontSize: '11px', color: already ? '#6a5e50' : costColor,
+      }).setOrigin(0.5);
 
-        this.add.text(px, cy + 60, `HEAT COST: ${cost > 0 ? '-' : '+'}${Math.abs(cost)} THRESH`, {
-          fontFamily: 'monospace', fontSize: '13px',
-          color: cost > 0 ? '#c0432e' : '#4cae6e',
+      // Virus risk
+      if (part.virusChance && part.virusChance > 0) {
+        this.add.text(px, sy + 28, `VIRUS RISK: ${Math.round(part.virusChance * 100)}%`, {
+          fontFamily: 'monospace', fontSize: '10px', color: already ? '#6a5e50' : '#c0432e',
         }).setOrigin(0.5);
-
-        this.add.text(px, cy + 80, compatLabel, {
-          fontFamily: 'monospace', fontSize: '14px', color: compatColor, letterSpacing: 1,
-        }).setOrigin(0.5);
-
-        // Virus warning
-        if (part.virusChance && part.virusChance > 0) {
-          this.add.text(px, cy + 100, `VIRUS RISK: ${Math.round(part.virusChance * 100)}%`, {
-            fontFamily: 'monospace', fontSize: '14px', color: '#c0432e', letterSpacing: 1,
-          }).setOrigin(0.5);
-        }
-
-        // Integrate button
-        const equipCheck = canEquipPart(this.selectedUnit, part);
-        const btnColor = equipCheck.ok ? '#e0d4bc' : '#4a4236';
-        const btn = this.add.text(px, cy + 140, equipCheck.ok ? '[ INTEGRATE ]' : '[ BLOCKED ]', {
-          fontFamily: 'monospace', fontSize: '14px', color: btnColor, letterSpacing: 2,
-        }).setOrigin(0.5);
-
-        if (equipCheck.ok) {
-          btn.setInteractive({ useHandCursor: true })
-            .on('pointerover', () => btn.setColor('#f0a84a'))
-            .on('pointerout', () => btn.setColor('#f0e8d8'))
-            .on('pointerdown', () => this.integratePart(part));
-        } else {
-          this.add.text(px, cy + 158, equipCheck.reason ?? '', {
-            fontFamily: 'monospace', fontSize: '15px', color: '#c8b89a',
-          }).setOrigin(0.5);
-        }
       }
 
-      px += cardW + 16;
+      // Collect button
+      if (!already) {
+        createButton(this, px, cy + cardH / 2 - 28, 'COLLECT', () => {
+          this.collectPart(part);
+        }, { color: rcNum, width: cardW - 20 });
+      } else {
+        this.add.text(px, cy + cardH / 2 - 28, 'COLLECTED', {
+          fontFamily: 'monospace', fontSize: '11px', color: '#4cae6e', letterSpacing: 2,
+        }).setOrigin(0.5);
+      }
+
+      px += cardW + 8;
     }
 
-    // Skip button
-    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 30, '[ SKIP — RETURN TO MAP ]', {
-      fontFamily: 'monospace', fontSize: '14px', color: '#c8b89a', letterSpacing: 2,
-    }).setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .on('pointerover', function(this: Phaser.GameObjects.Text) { this.setColor('#e8dcc8'); })
-      .on('pointerout', function(this: Phaser.GameObjects.Text) { this.setColor('#c8b89a'); })
-      .on('pointerdown', () => this.returnToMap());
+    // Bottom buttons
+    const btnY = GAME_HEIGHT - 30;
+    createButton(this, mob ? cx : cx - 140, btnY, 'OPEN INVENTORY', () => {
+      this.scene.start('Inventory');
+    }, { color: COLORS.elec2, width: mob ? GAME_WIDTH / 2 - 20 : 220 });
+
+    createButton(this, mob ? cx : cx + 140, mob ? btnY - 46 : btnY, 'CONTINUE', () => {
+      this.loot = [];
+      this.returnToMap();
+    }, { color: COLORS.copper, width: mob ? GAME_WIDTH / 2 - 20 : 220 });
   }
 
-  private integratePart(part: Part): void {
-    if (!this.selectedUnit) return;
+  private collectPart(part: Part): void {
     AudioManager.playSalvageClick();
-
-    this.selectedUnit.parts.push(part);
-
-    // Recompute stats
-    const newStats = computeStats(this.selectedUnit);
-    const currentHeat = this.selectedUnit.stats.heat;
-    this.selectedUnit.stats = { ...newStats, heat: currentHeat };
-
-    // Discover in schema book
+    this.collected.add(part.id);
+    runState.addToInventory(part);
     metaState.discoverPart(part.name);
-
-    // Virus check for kenet parts
-    if (part.virusChance && Math.random() < part.virusChance) {
-      // Apply kenet infection
-      this.selectedUnit.statusEffects.push({
-        type: 'kenet_infection',
-        duration: 3,
-        potency: 1,
-        sourceId: part.id,
-      });
-    }
-
     SaveManager.saveAll();
-    this.returnToMap();
+    // Re-render
+    this.scene.restart({
+      roomType: this.sceneData.roomType,
+      zone: this.sceneData.zone,
+      splitPending: this.sceneData.splitPending,
+      nextScene: this.sceneData.nextScene,
+    });
   }
 
   private returnToMap(): void {
-    this.loot = []; // Reset for next battle
-
-    // Route to split if pending
     if (this.sceneData.splitPending) {
       this.scene.start('Split', this.sceneData.splitPending);
       return;
     }
-    // Route to zone transition if boss
     if (this.sceneData.nextScene) {
       this.scene.start(this.sceneData.nextScene);
       return;

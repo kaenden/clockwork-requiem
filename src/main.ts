@@ -20,6 +20,7 @@ import { SchemaBookScene } from '@/scenes/SchemaBookScene';
 import { ArchiveScene } from '@/scenes/ArchiveScene';
 import { PvpMenuScene } from '@/scenes/PvpMenuScene';
 import { PvpBattleScene } from '@/scenes/PvpBattleScene';
+import { InventoryScene } from '@/scenes/InventoryScene';
 
 const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent)
   || (window.innerWidth <= 800 && 'ontouchstart' in window);
@@ -59,6 +60,7 @@ const config: Phaser.Types.Core.GameConfig = {
     SplitScene,
     SchemaBookScene,
     ArchiveScene,
+    InventoryScene,
     PvpMenuScene,
     PvpBattleScene,
   ],

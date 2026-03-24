@@ -146,6 +146,7 @@ export type Zone = 'boiler_works' | 'voltage_archives' | 'soul_labs' | 'kenet_he
 // ── Run State ──
 export interface RunState {
   units: UnitConfig[];
+  inventory: Part[];           // stash — unequipped parts
   map: MapNode[];
   currentNodeId: string | null;
   zone: Zone;
