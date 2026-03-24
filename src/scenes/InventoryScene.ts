@@ -119,42 +119,72 @@ export class InventoryScene extends Phaser.Scene {
 
         // Card bg
         const card = this.add.rectangle(x, y, itemW, itemH, isSelected ? 0x252018 : COLORS.surface)
-          .setStrokeStyle(isSelected ? 2 : 1, isSelected ? COLORS.copper3 : rcNum, isSelected ? 1 : 0.4);
+          .setStrokeStyle(isSelected ? 2 : 1, isSelected ? COLORS.copper3 : COLORS.border, isSelected ? 1 : 0.3);
         stashContainer.add(card);
+
+        // ── Rarity accent: left stripe + top line + bottom glow ──
+        stashContainer.add(this.add.rectangle(
+          x - itemW / 2 + 1.5, y, 3, itemH - 2, rcNum, 0.9
+        ));
+        stashContainer.add(this.add.rectangle(
+          x, y - itemH / 2 + 0.5, itemW, 1, rcNum, 0.6
+        ));
+        stashContainer.add(this.add.rectangle(
+          x, y + itemH / 2 - 3, itemW - 4, 6, rcNum, 0.08
+        ));
 
         // Category icon
         const slotDef = SLOT_DEFS.find(s => s.category === part.category);
         const icon = slotDef?.icon ?? '•';
-        stashContainer.add(this.add.text(x - itemW / 2 + 6, y - itemH / 2 + 4, icon, {
-          fontFamily: 'monospace', fontSize: '14px',
+        stashContainer.add(this.add.text(x - itemW / 2 + 10, y - itemH / 2 + 5, icon, {
+          fontFamily: 'monospace', fontSize: '13px',
         }));
 
         // Part name
-        stashContainer.add(this.add.text(x - itemW / 2 + 22, y - itemH / 2 + 4, part.name, {
+        stashContainer.add(this.add.text(x - itemW / 2 + 26, y - itemH / 2 + 5, part.name, {
           ...FONT.small(), color: rc,
         }));
 
-        // Rarity + source badge
+        // Rarity tag + source badge (top right)
+        const rarTag = part.rarity[0].toUpperCase();
         const srcLabel = part.powerSource[0].toUpperCase();
         const srcColor = powerColorStr(part.powerSource);
-        stashContainer.add(this.add.text(x + itemW / 2 - 6, y - itemH / 2 + 4, srcLabel, {
-          fontFamily: 'monospace', fontSize: '10px', color: srcColor,
+        stashContainer.add(this.add.text(x + itemW / 2 - 6, y - itemH / 2 + 3, `${rarTag}`, {
+          fontFamily: 'monospace', fontSize: '9px', color: rc,
+          backgroundColor: '#0d0c0b', padding: { x: 3, y: 1 },
+        }).setOrigin(1, 0));
+        stashContainer.add(this.add.text(x + itemW / 2 - 6, y - itemH / 2 + 16, srcLabel, {
+          fontFamily: 'monospace', fontSize: '9px', color: srcColor,
           backgroundColor: '#0d0c0b', padding: { x: 3, y: 1 },
         }).setOrigin(1, 0));
 
-        // Stats
-        const modStr = part.statMods.map(m => {
+        // Stats with +/- coloring
+        let statX = x - itemW / 2 + 10;
+        for (const m of part.statMods) {
           const sign = m.value >= 0 ? '+' : '';
-          return `${m.stat.toUpperCase()} ${sign}${m.value}`;
-        }).join('  ');
-        stashContainer.add(this.add.text(x - itemW / 2 + 6, y + 4, modStr || 'Passive', {
-          ...FONT.label(), color: '#c8b89a',
-        }));
+          const statColor = m.value >= 0 ? '#4cae6e' : '#c0432e';
+          const label = `${m.stat.toUpperCase()} ${sign}${m.value}`;
+          stashContainer.add(this.add.text(statX, y + 2, label, {
+            fontFamily: 'monospace', fontSize: '10px', color: statColor,
+          }));
+          statX += label.length * 7 + 6;
+        }
+        if (part.statMods.length === 0) {
+          stashContainer.add(this.add.text(x - itemW / 2 + 10, y + 2, 'Passive', {
+            fontFamily: 'monospace', fontSize: '10px', color: '#6a5e50',
+          }));
+        }
 
-        // Heat cost
-        stashContainer.add(this.add.text(x - itemW / 2 + 6, y + 18, `HEAT -${part.heatCost}T`, {
+        // Heat cost + ability hint
+        const heatLabel = `HEAT -${part.heatCost}T`;
+        stashContainer.add(this.add.text(x - itemW / 2 + 10, y + 18, heatLabel, {
           fontFamily: 'monospace', fontSize: '9px', color: '#c0432e',
         }));
+        if (part.ability) {
+          stashContainer.add(this.add.text(x + itemW / 2 - 8, y + 18, part.ability.name, {
+            fontFamily: 'monospace', fontSize: '8px', color: '#f5c563',
+          }).setOrigin(1, 0));
+        }
 
         // Click
         card.setInteractive({ useHandCursor: true })
@@ -320,43 +350,80 @@ export class InventoryScene extends Phaser.Scene {
       const slotH = mob ? 42 : 50;
 
       const equippedPart = unit.parts.find(p => p.category === slot.category);
+      const erc = equippedPart ? rarityColorNum(equippedPart.rarity) : 0;
 
       // Slot background
       const slotBg = this.add.rectangle(sx, sy, slotW, slotH,
         equippedPart ? 0x1a2018 : 0x151210
-      ).setStrokeStyle(1,
-        equippedPart ? rarityColorNum(equippedPart.rarity) : COLORS.border,
-        equippedPart ? 0.7 : 0.3
+      ).setStrokeStyle(equippedPart ? 2 : 1,
+        equippedPart ? erc : COLORS.border,
+        equippedPart ? 0.8 : 0.25
       );
 
       if (equippedPart) {
-        // Equipped part info
-        this.add.text(sx, sy - 10, equippedPart.name, {
-          fontFamily: 'monospace', fontSize: '9px', color: rarityColor(equippedPart.rarity),
+        const eRc = rarityColor(equippedPart.rarity);
+
+        // Rarity top accent line
+        this.add.rectangle(sx, sy - slotH / 2 + 0.5, slotW, 2, erc, 0.7);
+        // Rarity left stripe
+        this.add.rectangle(sx - slotW / 2 + 1, sy, 2, slotH - 4, erc, 0.6);
+        // Subtle inner glow
+        this.add.rectangle(sx, sy, slotW - 4, slotH - 4, erc, 0.04);
+
+        // Part name
+        this.add.text(sx, sy - 14, equippedPart.name, {
+          fontFamily: 'monospace', fontSize: '10px', color: eRc,
         }).setOrigin(0.5);
 
-        const modStr = equippedPart.statMods.map(m => `${m.value >= 0 ? '+' : ''}${m.value}`).join('/');
-        this.add.text(sx, sy + 4, modStr, {
-          fontFamily: 'monospace', fontSize: '8px', color: '#c8b89a',
+        // Rarity badge
+        this.add.text(sx + slotW / 2 - 4, sy - slotH / 2 + 4, equippedPart.rarity[0].toUpperCase(), {
+          fontFamily: 'monospace', fontSize: '8px', color: eRc,
+          backgroundColor: '#0d0c0b', padding: { x: 2, y: 0 },
+        }).setOrigin(1, 0);
+
+        // Stat mods with color coding
+        const statParts = equippedPart.statMods.map(m => {
+          const sign = m.value >= 0 ? '+' : '';
+          return `${m.stat.toUpperCase()} ${sign}${m.value}`;
+        });
+        this.add.text(sx, sy + 2, statParts.join('  ') || 'Passive', {
+          fontFamily: 'monospace', fontSize: '9px', color: '#c8b89a',
+        }).setOrigin(0.5);
+
+        // Heat cost
+        this.add.text(sx, sy + 14, `HEAT -${equippedPart.heatCost}T`, {
+          fontFamily: 'monospace', fontSize: '8px', color: '#c0432e',
         }).setOrigin(0.5);
 
         // Remove button
-        const removeBtn = this.add.text(sx + slotW / 2 - 2, sy - slotH / 2 + 2, '✕', {
-          fontFamily: 'monospace', fontSize: '10px', color: '#c0432e',
-          backgroundColor: '#0d0c0b', padding: { x: 2, y: 0 },
+        this.add.text(sx + slotW / 2 - 2, sy - slotH / 2 + 2, '✕', {
+          fontFamily: 'monospace', fontSize: '11px', color: '#c0432e',
+          backgroundColor: '#0d0c0b', padding: { x: 3, y: 0 },
         }).setOrigin(1, 0).setInteractive({ useHandCursor: true })
-          .on('pointerdown', () => {
-            this.unequipPart(unit, equippedPart);
-          });
+          .on('pointerdown', () => this.unequipPart(unit, equippedPart));
       } else {
-        // Empty slot
-        this.add.text(sx, sy - 8, slot.icon, {
-          fontFamily: 'monospace', fontSize: '16px', color: '#3a3530',
+        // Empty slot — dashed appearance
+        this.add.text(sx, sy - 10, slot.icon, {
+          fontFamily: 'monospace', fontSize: '18px', color: '#2a2620',
         }).setOrigin(0.5);
 
         this.add.text(sx, sy + 10, slot.label, {
-          fontFamily: 'monospace', fontSize: '8px', color: '#3a3530', letterSpacing: 1,
+          fontFamily: 'monospace', fontSize: '9px', color: '#2a2620', letterSpacing: 2,
         }).setOrigin(0.5);
+
+        // Corner dashes for empty-slot feel
+        const g = this.add.graphics();
+        g.lineStyle(1, COLORS.border, 0.2);
+        const m = 4;
+        const dl = 8;
+        g.lineBetween(sx - slotW/2 + m, sy - slotH/2 + m, sx - slotW/2 + m + dl, sy - slotH/2 + m);
+        g.lineBetween(sx - slotW/2 + m, sy - slotH/2 + m, sx - slotW/2 + m, sy - slotH/2 + m + dl);
+        g.lineBetween(sx + slotW/2 - m, sy - slotH/2 + m, sx + slotW/2 - m - dl, sy - slotH/2 + m);
+        g.lineBetween(sx + slotW/2 - m, sy + slotH/2 - m, sx + slotW/2 - m - dl, sy + slotH/2 - m);
+        g.lineBetween(sx - slotW/2 + m, sy + slotH/2 - m, sx - slotW/2 + m + dl, sy + slotH/2 - m);
+        g.lineBetween(sx + slotW/2 - m, sy - slotH/2 + m, sx + slotW/2 - m, sy - slotH/2 + m + dl);
+        g.lineBetween(sx - slotW/2 + m, sy + slotH/2 - m, sx - slotW/2 + m, sy + slotH/2 - m - dl);
+        g.lineBetween(sx + slotW/2 - m, sy + slotH/2 - m, sx + slotW/2 - m, sy + slotH/2 - m - dl);
       }
 
       // Clicking slot highlights compatible parts
@@ -651,37 +718,96 @@ export class InventoryScene extends Phaser.Scene {
   // ═══════════════════════════════════════════════
   private drawPartDetailBar(part: Part, mob: boolean): void {
     const cx = GAME_WIDTH / 2;
-    const detailY = GAME_HEIGHT - 70;
-    const barH = 56;
+    const barH = 90;
+    const detailY = GAME_HEIGHT - barH - 8;
+    const rc = rarityColor(part.rarity);
+    const rcNum = rarityColorNum(part.rarity);
 
-    this.add.rectangle(cx, detailY + barH / 2, GAME_WIDTH - 10, barH, 0x0d0c0b, 0.95)
-      .setStrokeStyle(1, rarityColorNum(part.rarity), 0.7).setDepth(300);
+    // Background panel
+    this.add.rectangle(cx, detailY + barH / 2, GAME_WIDTH - 10, barH, 0x0d0c0b, 0.97)
+      .setStrokeStyle(1, COLORS.border, 0.5).setDepth(300);
 
+    // Rarity accent top line
+    this.add.rectangle(cx, detailY, GAME_WIDTH - 12, 2, rcNum, 0.8).setDepth(301);
+    // Left rarity stripe
+    this.add.rectangle(8, detailY + barH / 2, 3, barH - 4, rcNum, 0.9).setDepth(301);
+
+    // ── Row 1: Icon + Name + Rarity + Category ──
     const slotDef = SLOT_DEFS.find(s => s.category === part.category);
-    this.add.text(20, detailY + 4, `${slotDef?.icon ?? '•'} ${part.name}`, {
-      ...FONT.body(), color: rarityColor(part.rarity),
+    this.add.text(18, detailY + 6, `${slotDef?.icon ?? '•'} ${part.name}`, {
+      ...FONT.body(), color: rc,
     }).setDepth(301);
 
-    this.add.text(20, detailY + 22, `${part.rarity.toUpperCase()} ${part.powerSource.toUpperCase()} ${part.category.replace(/_/g, ' ').toUpperCase()}`, {
-      fontFamily: 'monospace', fontSize: '9px', color: '#a89878',
+    // Rarity pill
+    this.add.text(18 + (part.name.length + 3) * 9, detailY + 7, part.rarity.toUpperCase(), {
+      fontFamily: 'monospace', fontSize: '9px', color: rc,
+      backgroundColor: '#151210', padding: { x: 5, y: 2 },
     }).setDepth(301);
 
-    const modStr = part.statMods.map(m => `${m.stat.toUpperCase()} ${m.value >= 0 ? '+' : ''}${m.value}`).join('  ');
-    this.add.text(20, detailY + 36, `${modStr}  |  HEAT COST: ${part.heatCost}`, {
-      ...FONT.small(), color: '#c8b89a',
+    // Source + category
+    const srcColor = powerColorStr(part.powerSource);
+    this.add.text(18, detailY + 26, `${part.powerSource.toUpperCase()} | ${part.category.replace(/_/g, ' ').toUpperCase()}`, {
+      fontFamily: 'monospace', fontSize: '10px', color: srcColor,
     }).setDepth(301);
 
-    if (part.ability) {
-      this.add.text(GAME_WIDTH / 2, detailY + 36, `ABILITY: ${part.ability.name}`, {
-        fontFamily: 'monospace', fontSize: '9px', color: '#f5c563',
+    // ── Row 2: Stats with individual coloring ──
+    let sx = 18;
+    for (const m of part.statMods) {
+      const sign = m.value >= 0 ? '+' : '';
+      const statColor = m.value >= 0 ? '#4cae6e' : '#c0432e';
+      const statLabel = m.stat.toUpperCase();
+      const valText = `${sign}${m.value}`;
+
+      this.add.text(sx, detailY + 44, statLabel, {
+        fontFamily: 'monospace', fontSize: '10px', color: '#a89878',
       }).setDepth(301);
+      this.add.text(sx + statLabel.length * 7 + 2, detailY + 44, valText, {
+        fontFamily: 'monospace', fontSize: '11px', color: statColor,
+      }).setDepth(301);
+
+      if (m.percent) {
+        this.add.text(sx + (statLabel.length + valText.length) * 7 + 4, detailY + 44, `(${m.percent > 0 ? '+' : ''}${m.percent}%)`, {
+          fontFamily: 'monospace', fontSize: '9px', color: statColor,
+        }).setDepth(301);
+      }
+
+      sx += (statLabel.length + valText.length) * 7 + 22;
     }
 
-    // Discard button
-    this.add.text(GAME_WIDTH - 20, detailY + barH / 2, 'DISCARD', {
+    // Heat cost (always shown)
+    this.add.text(sx, detailY + 44, `HEAT COST: -${part.heatCost}T`, {
+      fontFamily: 'monospace', fontSize: '10px', color: '#c0432e',
+    }).setDepth(301);
+
+    // ── Row 3: Ability + Virus risk ──
+    let infoX = 18;
+    if (part.ability) {
+      this.add.text(infoX, detailY + 62, `⚔ ${part.ability.name}`, {
+        fontFamily: 'monospace', fontSize: '10px', color: '#f5c563',
+      }).setDepth(301);
+      if (part.ability.description) {
+        this.add.text(infoX + (part.ability.name.length + 3) * 7, detailY + 62, part.ability.description, {
+          fontFamily: 'monospace', fontSize: '9px', color: '#c8b89a',
+        }).setDepth(301);
+      }
+    }
+
+    if (part.virusChance && part.virusChance > 0) {
+      const virusPct = Math.round(part.virusChance * 100);
+      this.add.text(mob ? cx : cx + 80, detailY + 62, `☣ VIRUS RISK: ${virusPct}%`, {
+        fontFamily: 'monospace', fontSize: '10px', color: '#c0432e',
+        backgroundColor: '#2a1010', padding: { x: 4, y: 1 },
+      }).setOrigin(mob ? 0.5 : 0, 0).setDepth(301);
+    }
+
+    // ── Action buttons (right side) ──
+    const btnX = GAME_WIDTH - 16;
+
+    // Discard
+    this.add.text(btnX, detailY + 18, '🗑 DISCARD', {
       fontFamily: 'monospace', fontSize: '11px', color: '#c0432e',
       backgroundColor: '#1a1010', padding: { x: 8, y: 4 },
-    }).setOrigin(1, 0.5).setDepth(301)
+    }).setOrigin(1, 0).setDepth(301)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => {
         runState.removeFromInventory(part.id);
@@ -692,10 +818,10 @@ export class InventoryScene extends Phaser.Scene {
       });
 
     // Deselect
-    this.add.text(GAME_WIDTH - 100, detailY + barH / 2, 'DESELECT', {
-      fontFamily: 'monospace', fontSize: '9px', color: '#a89878',
-      backgroundColor: '#1a1815', padding: { x: 6, y: 3 },
-    }).setOrigin(1, 0.5).setDepth(301)
+    this.add.text(btnX, detailY + 48, '✕ CLOSE', {
+      fontFamily: 'monospace', fontSize: '10px', color: '#a89878',
+      backgroundColor: '#1a1815', padding: { x: 8, y: 3 },
+    }).setOrigin(1, 0).setDepth(301)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => {
         this.selectedPart = null;
