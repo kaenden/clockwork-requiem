@@ -5,6 +5,7 @@ import { metaState } from '@/state/MetaStateManager';
 import { HeatManager } from '@/systems/HeatManager';
 import { StatusEffectProcessor } from '@/systems/StatusEffectProcessor';
 import { pickTerminalEvent, type TerminalChoice } from '@/data/roomEvents';
+import { LORE_ENTRIES } from '@/data/lore';
 import { AudioManager } from '@/systems/AudioManager';
 import { fadeIn } from '@/ui/SceneTransition';
 import { isMobile } from '@/utils/Mobile';
@@ -146,7 +147,15 @@ export class TerminalScene extends Phaser.Scene {
       this.add.text(cx, ry, r, { fontFamily: 'monospace', fontSize: '12px', color: '#e8dcc8' }).setOrigin(0.5).setDepth(201);
       ry += 22;
     }
-    metaState.unlockJournal(choice.label);
+    // Unlock a lore entry from the current zone
+    const zone = runState.get().zone;
+    const zoneLore = LORE_ENTRIES.filter(e => e.zone === zone);
+    const unlocked = metaState.get().axiomJournals;
+    const unread = zoneLore.filter(e => !unlocked.includes(e.id));
+    if (unread.length > 0) {
+      metaState.unlockJournal(unread[0].id);
+      results.push(`JOURNAL UNLOCKED: ${unread[0].title}`);
+    }
     this.time.delayedCall(1800, () => { runState.clearCurrentRoom(); this.scene.start('Map'); });
   }
 }

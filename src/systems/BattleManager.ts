@@ -2,6 +2,7 @@ import type { UnitConfig, RoomType, UnitStats } from '@/types';
 import { HeatManager } from '@/systems/HeatManager';
 import { SynergyEngine } from '@/systems/SynergyEngine';
 import { StatusEffectProcessor } from '@/systems/StatusEffectProcessor';
+import { AbilityProcessor } from '@/systems/AbilityProcessor';
 import { EnemyFactory } from '@/entities/EnemyFactory';
 import { eventBus } from '@/utils/EventBus';
 
@@ -96,6 +97,17 @@ export const BattleManager = {
 
         if (!actor.alive) continue;
 
+        // Body passive at turn start
+        const isAllyForPassive = allies.includes(actor);
+        const passiveLogs = AbilityProcessor.processBodyPassive(
+          actor,
+          isAllyForPassive ? allies : enemies,
+          isAllyForPassive ? enemies : allies,
+        );
+        statusLogs.push(...passiveLogs);
+
+        if (!actor.alive) continue;
+
         // Check if can act
         if (!StatusEffectProcessor.canAct(actor)) {
           statusLogs.push(`${actor.name} cannot act this turn`);
@@ -112,39 +124,84 @@ export const BattleManager = {
 
         const target = this.selectTarget(actor, targetPool);
 
-        // Calculate damage
+        // Process weapon ability
         const atkMod = StatusEffectProcessor.getAtkModifier(actor);
         const heatDmgMult = HeatManager.getAbilityDamageMultiplier(actor);
         const rawDamage = Math.round(actor.stats.atk * atkMod * heatDmgMult);
-        const defense = target.stats.def;
-        const damage = Math.max(1, rawDamage - defense);
+
+        const abilityResult = AbilityProcessor.processWeaponAbility(
+          actor, target, rawDamage,
+          isAlly ? allies : enemies,
+          isAlly ? enemies : allies,
+        );
+
+        // Apply DEF with ability-based ignore
+        const effectiveDef = Math.round(target.stats.def * (1 - abilityResult.defIgnored));
+        const damage = Math.max(1, rawDamage + abilityResult.extraDamage - effectiveDef);
 
         // Apply damage
         target.stats.hp = Math.max(0, target.stats.hp - damage);
-        if (target.stats.hp <= 0) {
-          target.alive = false;
+        if (target.stats.hp <= 0) target.alive = false;
+
+        // Self-heal (life drain etc.)
+        if (abilityResult.selfHeal > 0) {
+          actor.stats.hp = Math.min(actor.stats.maxHp, actor.stats.hp + abilityResult.selfHeal);
         }
 
-        // Heat generation from attack
+        // Heat generation
         const baseHeat = 2;
         const heatMult = HeatManager.getAbilityHeatMultiplier(actor);
         const heatGen = Math.round(baseHeat * heatMult);
         HeatManager.addHeat(actor, heatGen);
 
-        // Small heat from taking damage (only if target still alive)
-        if (target.alive && damage > 20) {
-          HeatManager.addHeat(target, 1);
+        if (target.alive && damage > 20) HeatManager.addHeat(target, 1);
+
+        // On-hit reactions (counter, reflect)
+        const onHit = AbilityProcessor.processOnHit(target, actor, damage);
+        if (onHit.counterDamage > 0 && actor.alive) {
+          actor.stats.hp = Math.max(0, actor.stats.hp - onHit.counterDamage);
+          if (actor.stats.hp <= 0) actor.alive = false;
+        }
+        if (onHit.reflectDamage > 0 && actor.alive) {
+          actor.stats.hp = Math.max(0, actor.stats.hp - onHit.reflectDamage);
+          if (actor.stats.hp <= 0) actor.alive = false;
         }
 
+        const special = abilityResult.log.length > 0 ? abilityResult.log.join(' ') : null;
         actions.push({
-          actorId: actor.id,
-          actorName: actor.name,
-          targetId: target.id,
-          targetName: target.name,
-          damage,
-          heatGenerated: heatGen,
-          special: null,
+          actorId: actor.id, actorName: actor.name,
+          targetId: target.id, targetName: target.name,
+          damage, heatGenerated: heatGen, special,
         });
+
+        // Apply splash damage from abilities
+        for (const splash of abilityResult.splashTargets) {
+          const st = [...allies, ...enemies].find(u => u.id === splash.id);
+          if (st && st.alive) {
+            st.stats.hp = Math.max(0, st.stats.hp - splash.damage);
+            if (st.stats.hp <= 0) st.alive = false;
+            actions.push({
+              actorId: actor.id, actorName: actor.name,
+              targetId: st.id, targetName: st.name,
+              damage: splash.damage, heatGenerated: 0,
+              special: 'AoE',
+            });
+          }
+        }
+        statusLogs.push(...abilityResult.log);
+        statusLogs.push(...onHit.log);
+
+        // Repeat attack (echo strike)
+        if (abilityResult.repeatAttack && target.alive && actor.alive) {
+          const repeatDmg = Math.max(1, Math.round(rawDamage * 0.7) - effectiveDef);
+          target.stats.hp = Math.max(0, target.stats.hp - repeatDmg);
+          if (target.stats.hp <= 0) target.alive = false;
+          actions.push({
+            actorId: actor.id, actorName: actor.name,
+            targetId: target.id, targetName: target.name,
+            damage: repeatDmg, heatGenerated: 0, special: 'ECHO',
+          });
+        }
 
         // Synergy: Chain Transmission (electric splash)
         if (isAlly && synergies.some(s => s.type === 'chain_transmission') && actor.powerSource === 'electric') {

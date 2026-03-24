@@ -74,6 +74,7 @@ export class MenuScene extends Phaser.Scene {
       { label: 'CONTINUE',       cb: () => this.continueRun(),             color: COLORS.copper3, disabled: !hasRun },
       { label: 'PROTOCOL WARS',  cb: () => this.scene.start('PvpMenu'),    color: COLORS.rust2 },
       { label: 'SCHEMA BOOK',    cb: () => this.scene.start('SchemaBook'), color: COLORS.elec2 },
+      { label: 'JOURNALS',       cb: () => this.scene.start('Journal'),    color: COLORS.copper },
       { label: 'ARCHIVES',       cb: () => this.scene.start('Archive'),    color: COLORS.soul2 },
     ];
 

@@ -4,6 +4,8 @@ import {
   HEAT_PHASE, BODY_SPLIT_LEVEL, WEAPON_SPLIT_LEVEL,
   XP_PER_LEVEL, AXIOM_MAX_FOREIGN_PARTS,
 } from '@/data/constants';
+import { BODY_BONUSES } from '@/data/classTree';
+import { WEAPON_BONUSES } from '@/data/classTree';
 
 // ── Compatibility check ──
 export function getCompatibility(partSource: PowerSource, unitSource: PowerSource): Compatibility {
@@ -28,6 +30,26 @@ export function computeStats(unit: UnitConfig): UnitStats {
   for (const [key, val] of Object.entries(growth)) {
     if (key in base && typeof val === 'number') {
       (base as any)[key] += val * (unit.level - 1);
+    }
+  }
+
+  // Body type bonuses (Lv.10 split)
+  if (unit.bodyType && unit.bodyType in BODY_BONUSES) {
+    const bonus = BODY_BONUSES[unit.bodyType];
+    for (const [key, val] of Object.entries(bonus.stats)) {
+      if (key in base && typeof val === 'number') {
+        (base as any)[key] += val;
+      }
+    }
+  }
+
+  // Weapon module bonuses (Lv.20 split)
+  if (unit.weaponModule && unit.weaponModule in WEAPON_BONUSES) {
+    const bonus = WEAPON_BONUSES[unit.weaponModule];
+    for (const [key, val] of Object.entries(bonus.stats)) {
+      if (key in base && typeof val === 'number') {
+        (base as any)[key] += val;
+      }
     }
   }
 

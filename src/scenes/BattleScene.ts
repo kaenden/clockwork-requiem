@@ -60,8 +60,8 @@ export class BattleScene extends Phaser.Scene {
     const cx = GAME_WIDTH / 2;
     this.realAllies = state.units.filter(u => u.alive);
 
-    // Generate enemies
-    this.enemies = EnemyFactory.generateEnemies(state.zone, state.zoneIndex, this.roomType);
+    // Generate enemies (with ascension scaling)
+    this.enemies = EnemyFactory.generateEnemies(state.zone, state.zoneIndex, this.roomType, state.ascension);
 
     // Simulate
     const simAllies = deepCloneUnits(this.realAllies);

@@ -128,8 +128,15 @@ export class RunStartScene extends Phaser.Scene {
   }
 
   private selectPower(source: PowerSource): void {
-    runState.start('boiler_works', metaState.get().ascensionLevel);
+    const ascension = metaState.get().ascensionLevel;
+    runState.start('boiler_works', ascension);
     const axiom = UnitFactory.createAxiom(source);
+
+    // Apply ascension penalties to starting unit
+    if (ascension > 0) {
+      axiom.stats.thresh = Math.max(20, axiom.stats.thresh - ascension * 5);
+    }
+
     runState.addUnit(axiom);
     this.scene.start('Map');
   }
