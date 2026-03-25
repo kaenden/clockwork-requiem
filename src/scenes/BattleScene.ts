@@ -409,7 +409,8 @@ export class BattleScene extends Phaser.Scene {
           runState.end(true);
           this.scene.start('GameOver', { won: true });
         } else {
-          this.scene.start('Salvage', { roomType: this.roomType, zone: runState.get().zone, nextScene: 'ZoneTransition' });
+          // Boss kill → Salvage → Keepsake Reward → ZoneTransition
+          this.scene.start('Salvage', { roomType: this.roomType, zone: runState.get().zone, nextScene: 'KeepsakeReward' });
         }
         return;
       }

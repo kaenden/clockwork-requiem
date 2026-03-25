@@ -1,9 +1,10 @@
-import type { RunState, UnitConfig, MapNode, Zone, Directive, Part } from '@/types';
+import type { RunState, UnitConfig, MapNode, Zone, Directive, Part, Keepsake } from '@/types';
 import { eventBus } from '@/utils/EventBus';
 
 const DEFAULT_RUN: RunState = {
   units: [],
   inventory: [],
+  keepsakes: [],
   map: [],
   currentNodeId: null,
   zone: 'boiler_works',
@@ -99,6 +100,23 @@ class RunStateManager {
 
   getInventory(): Part[] {
     return this.state.inventory;
+  }
+
+  // ── Keepsakes ──
+  addKeepsake(keepsake: Keepsake): boolean {
+    if (this.state.keepsakes.length >= 3) return false;
+    this.state.keepsakes.push(keepsake);
+    eventBus.emit('run:keepsake_add', keepsake);
+    return true;
+  }
+
+  removeKeepsake(keepsakeId: string): void {
+    this.state.keepsakes = this.state.keepsakes.filter(k => k.id !== keepsakeId);
+    eventBus.emit('run:keepsake_remove', keepsakeId);
+  }
+
+  getKeepsakes(): Keepsake[] {
+    return this.state.keepsakes;
   }
 
   setDirective(unitId: string, directive: Directive): void {

@@ -20,7 +20,7 @@ export const FONT = {
 export function drawPanel(
   scene: Phaser.Scene,
   x: number, y: number, w: number, h: number,
-  accentColor = COLORS.copper
+  accentColor: number = COLORS.copper
 ): Phaser.GameObjects.Container {
   const c = scene.add.container(x, y);
 

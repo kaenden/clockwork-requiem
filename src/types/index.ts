@@ -147,6 +147,7 @@ export type Zone = 'boiler_works' | 'voltage_archives' | 'soul_labs' | 'kenet_he
 export interface RunState {
   units: UnitConfig[];
   inventory: Part[];           // stash — unequipped parts
+  keepsakes: Keepsake[];       // team-wide relics (max 3)
   map: MapNode[];
   currentNodeId: string | null;
   zone: Zone;
@@ -192,3 +193,47 @@ export interface ActiveSynergy {
 
 // ── Compatibility ──
 export type Compatibility = 'full' | 'partial' | 'conflict';
+
+// ── Keepsake (team-wide relic) ──
+export type KeepsakeRarity = 'bronze' | 'silver' | 'gold';
+
+export interface Keepsake {
+  id: string;
+  name: string;
+  icon: string;          // emoji/symbol
+  description: string;
+  rarity: KeepsakeRarity;
+  effects: KeepsakeEffect[];
+}
+
+export interface KeepsakeEffect {
+  type: KeepsakeEffectType;
+  value: number;
+  condition?: string;   // optional condition description
+}
+
+export type KeepsakeEffectType =
+  | 'team_atk'          // +flat ATK to all
+  | 'team_def'          // +flat DEF to all
+  | 'team_spd'          // +flat SPD to all
+  | 'team_hp'           // +flat maxHP to all
+  | 'team_thresh'       // +flat THRESH to all
+  | 'team_atk_pct'      // +% ATK to all
+  | 'team_def_pct'      // +% DEF to all
+  | 'heal_per_battle'   // heal X HP after each battle
+  | 'heat_reduce'       // reduce X heat after each battle
+  | 'xp_bonus_pct'      // +% XP gain
+  | 'salvage_extra'     // +N extra salvage drops
+  | 'consciousness_bonus' // +N consciousness per battle
+  | 'start_heat_reduce' // start each battle with less heat
+  | 'crit_chance'       // +% global crit chance
+  | 'virus_resist';     // reduce virus chance by X%
+
+// ── Combo Ability (body + weapon synergy) ──
+export interface ComboAbility {
+  bodyType: BodyType;
+  weaponModule: WeaponModule;
+  name: string;
+  description: string;
+  icon: string;
+}

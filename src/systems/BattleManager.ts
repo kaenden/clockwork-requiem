@@ -3,8 +3,10 @@ import { HeatManager } from '@/systems/HeatManager';
 import { SynergyEngine } from '@/systems/SynergyEngine';
 import { StatusEffectProcessor } from '@/systems/StatusEffectProcessor';
 import { AbilityProcessor } from '@/systems/AbilityProcessor';
+import { KeepsakeEngine } from '@/systems/KeepsakeEngine';
 import { EnemyFactory } from '@/entities/EnemyFactory';
 import { eventBus } from '@/utils/EventBus';
+import { runState } from '@/state/RunStateManager';
 
 export interface BattleAction {
   actorId: string;
@@ -69,6 +71,10 @@ export const BattleManager = {
     // Evaluate synergies and apply pre-battle bonuses
     const synergies = SynergyEngine.evaluate(allies);
     SynergyEngine.applyPreBattle(allies, synergies);
+
+    // Apply keepsake buffs
+    const keepsakes = runState.getKeepsakes();
+    KeepsakeEngine.applyPreBattle(allies, keepsakes);
 
     eventBus.emit('battle:start', { allies, enemies, synergies });
 
@@ -287,8 +293,15 @@ export const BattleManager = {
       }
     }
 
-    // XP uses EnemyFactory formula (accounts for room type multiplier)
-    const xpEarned = won ? EnemyFactory.getXpReward(enemies, roomType) : 0;
+    // Post-battle keepsake effects (healing, heat reduction)
+    if (won) {
+      KeepsakeEngine.applyPostBattle(allies, keepsakes);
+    }
+
+    // XP uses EnemyFactory formula (accounts for room type multiplier) + keepsake bonus
+    const xpBonusPct = KeepsakeEngine.getXpBonusPct(keepsakes);
+    const baseXp = won ? EnemyFactory.getXpReward(enemies, roomType) : 0;
+    const xpEarned = Math.round(baseXp * (1 + xpBonusPct / 100));
 
     const result: BattleResult = {
       won,
