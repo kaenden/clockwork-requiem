@@ -6,13 +6,11 @@ import { LootGenerator } from '@/systems/LootGenerator';
 import { AudioManager } from '@/systems/AudioManager';
 import { SaveManager } from '@/utils/SaveManager';
 import { fadeIn } from '@/ui/SceneTransition';
-import { createButton, rarityColor } from '@/ui/UIKit';
+import { createButton, rarityColor, rarityColorNum, FONT } from '@/ui/UIKit';
 import { isMobile } from '@/utils/Mobile';
 import type { Part, RoomType, Zone } from '@/types';
 
 export class SalvageScene extends Phaser.Scene {
-  private loot: Part[] = [];
-  private collected: Set<string> = new Set();
   private sceneData: {
     roomType: RoomType; zone: Zone;
     splitPending?: { unitId: string; splitType: 'body' | 'weapon' } | null;
@@ -30,10 +28,6 @@ export class SalvageScene extends Phaser.Scene {
       splitPending: data.splitPending ?? null,
       nextScene: data.nextScene,
     };
-    if (this.loot.length === 0) {
-      this.loot = LootGenerator.generate(zone, data.roomType);
-    }
-    this.collected = new Set();
   }
 
   create(): void {
@@ -42,121 +36,166 @@ export class SalvageScene extends Phaser.Scene {
     const mob = isMobile();
     const cx = GAME_WIDTH / 2;
 
-    // Header
-    this.add.rectangle(cx, 0, GAME_WIDTH, 50, COLORS.copper, 0.06).setOrigin(0.5, 0);
-    this.add.text(cx, 12, 'SALVAGE STATION', {
-      fontFamily: 'monospace', fontSize: '16px', color: '#f5c563', letterSpacing: 4,
-    }).setOrigin(0.5);
-    this.add.text(cx, 34, 'Collect parts to your INVENTORY — equip them from the TEAM screen', {
-      fontFamily: 'monospace', fontSize: '10px', color: '#c8b89a',
-    }).setOrigin(0.5);
+    // ── Roll for loot ──
+    const keepsakes = runState.getKeepsakes();
+    const result = LootGenerator.roll(this.sceneData.zone, this.sceneData.roomType, keepsakes);
 
-    // Inventory count
-    const inv = runState.getInventory();
-    this.add.text(GAME_WIDTH - 20, 60, `INVENTORY: ${inv.length} parts`, {
-      fontFamily: 'monospace', fontSize: '10px', color: '#a89878',
-    }).setOrigin(1, 0);
+    // ── Auto-collect all drops ──
+    for (const part of result.parts) {
+      runState.addToInventory(part);
+      metaState.discoverPart(part.name);
+    }
+    if (result.parts.length > 0) SaveManager.saveAll();
 
-    // Part cards
-    const cardW = mob ? (GAME_WIDTH - 30) / this.loot.length - 4 : Math.min(300, (GAME_WIDTH - 60) / this.loot.length - 8);
-    const totalW = this.loot.length * (cardW + 8);
-    let px = cx - totalW / 2 + cardW / 2 + 4;
+    // ── Header ──
+    this.add.rectangle(cx, 0, GAME_WIDTH, 44, COLORS.copper, 0.06).setOrigin(0.5, 0);
 
-    for (const part of this.loot) {
-      const cy = mob ? GAME_HEIGHT / 2 - 30 : GAME_HEIGHT / 2 - 40;
-      const cardH = mob ? 320 : 380;
-      const rc = rarityColor(part.rarity);
-      const rcNum = parseInt(rc.replace('#', ''), 16);
-      const already = this.collected.has(part.id);
-
-      // Card bg
-      this.add.rectangle(px, cy, cardW, cardH, COLORS.surface)
-        .setStrokeStyle(1, already ? COLORS.border : rcNum, already ? 0.3 : 0.6);
-      this.add.rectangle(px - cardW / 2 + 2, cy, 3, cardH, already ? COLORS.border : rcNum, already ? 0.3 : 1);
-
-      // Part name
-      this.add.text(px, cy - cardH / 2 + 18, part.name, {
-        fontFamily: 'monospace', fontSize: '13px', color: already ? '#6a5e50' : rc, letterSpacing: 1,
+    if (!result.dropped) {
+      // No loot dropped
+      this.add.text(cx, 14, 'NO SALVAGE', {
+        ...FONT.heading(), color: '#6a5e50',
+      }).setOrigin(0.5);
+      this.add.text(cx, 36, 'Nothing useful recovered from this battle.', {
+        ...FONT.small(), color: '#4a4030',
       }).setOrigin(0.5);
 
-      // Rarity + Category
-      this.add.text(px, cy - cardH / 2 + 36, `${part.rarity.toUpperCase()} — ${part.category.replace(/_/g, ' ').toUpperCase()}`, {
-        fontFamily: 'monospace', fontSize: '9px', color: already ? '#6a5e50' : '#c8b89a', letterSpacing: 1,
-      }).setOrigin(0.5);
-
-      // Power source
-      const srcColors: Record<string, string> = { steam: '#e8913a', electric: '#2aa8d4', soul: '#9b52d4' };
-      this.add.text(px, cy - cardH / 2 + 54, part.powerSource.toUpperCase(), {
-        fontFamily: 'monospace', fontSize: '10px',
-        color: already ? '#6a5e50' : (srcColors[part.powerSource] ?? '#c8b89a'), letterSpacing: 2,
-      }).setOrigin(0.5);
-
-      // Stat mods
-      let sy = cy - cardH / 2 + 80;
-      for (const mod of part.statMods) {
-        const sign = mod.value >= 0 ? '+' : '';
-        const color = already ? '#6a5e50' : mod.value >= 0 ? '#4cae6e' : '#c0432e';
-        this.add.text(px, sy, `${mod.stat.toUpperCase()} ${sign}${mod.value}`, {
-          fontFamily: 'monospace', fontSize: '13px', color, letterSpacing: 1,
-        }).setOrigin(0.5);
-        sy += 22;
-      }
-
-      // Heat cost
-      const costColor = part.heatCost > 0 ? '#c0432e' : '#4cae6e';
-      this.add.text(px, sy + 8, `HEAT COST: ${part.heatCost > 0 ? '-' : '+'}${Math.abs(part.heatCost)} THRESH`, {
-        fontFamily: 'monospace', fontSize: '11px', color: already ? '#6a5e50' : costColor,
-      }).setOrigin(0.5);
-
-      // Virus risk
-      if (part.virusChance && part.virusChance > 0) {
-        this.add.text(px, sy + 28, `VIRUS RISK: ${Math.round(part.virusChance * 100)}%`, {
-          fontFamily: 'monospace', fontSize: '10px', color: already ? '#6a5e50' : '#c0432e',
-        }).setOrigin(0.5);
-      }
-
-      // Collect button
-      if (!already) {
-        createButton(this, px, cy + cardH / 2 - 28, 'COLLECT', () => {
-          this.collectPart(part);
-        }, { color: rcNum, width: cardW - 20 });
-      } else {
-        this.add.text(px, cy + cardH / 2 - 28, 'COLLECTED', {
-          fontFamily: 'monospace', fontSize: '11px', color: '#4cae6e', letterSpacing: 2,
-        }).setOrigin(0.5);
-      }
-
-      px += cardW + 8;
+      // Auto-continue after short delay
+      this.time.delayedCall(1200, () => this.proceed());
+      return;
     }
 
-    // Bottom buttons
-    const btnY = GAME_HEIGHT - 30;
-    createButton(this, mob ? cx : cx - 140, btnY, 'OPEN INVENTORY', () => {
-      this.scene.start('Inventory');
-    }, { color: COLORS.elec2, width: mob ? GAME_WIDTH / 2 - 20 : 220 });
+    // ── Loot found ──
+    this.add.text(cx, 14, `SALVAGE — ${result.parts.length} PART${result.parts.length > 1 ? 'S' : ''} RECOVERED`, {
+      ...FONT.heading(), color: '#f5c563',
+    }).setOrigin(0.5);
 
-    createButton(this, mob ? cx : cx + 140, mob ? btnY - 46 : btnY, 'CONTINUE', () => {
-      this.loot = [];
-      this.returnToMap();
-    }, { color: COLORS.copper, width: mob ? GAME_WIDTH / 2 - 20 : 220 });
+    this.add.text(cx, 36, 'Auto-collected to your inventory', {
+      ...FONT.small(), color: '#a89878',
+    }).setOrigin(0.5);
+
+    // ── Display loot cards ──
+    const maxCols = mob ? 2 : Math.min(result.parts.length, 4);
+    const cardW = mob
+      ? (GAME_WIDTH - 30) / maxCols - 4
+      : Math.min(260, (GAME_WIDTH - 60) / maxCols - 8);
+    const cardH = mob ? 140 : 180;
+    const rows = Math.ceil(result.parts.length / maxCols);
+    const gridStartY = 60;
+
+    result.parts.forEach((part, i) => {
+      const col = i % maxCols;
+      const row = Math.floor(i / maxCols);
+      const px = cx - (maxCols * (cardW + 8)) / 2 + col * (cardW + 8) + cardW / 2 + 4;
+      const py = gridStartY + row * (cardH + 8) + cardH / 2;
+
+      if (py + cardH / 2 > GAME_HEIGHT - 80) return; // overflow guard
+
+      this.drawLootCard(px, py, cardW, cardH, part, i);
+    });
+
+    // ── Inventory count ──
+    const inv = runState.getInventory();
+    this.add.text(cx, GAME_HEIGHT - 70, `INVENTORY: ${inv.length} parts`, {
+      ...FONT.small(), color: '#a89878',
+    }).setOrigin(0.5);
+
+    // ── Bottom buttons ──
+    const btnY = GAME_HEIGHT - 34;
+    const btnW = mob ? (GAME_WIDTH - 30) / 2 - 4 : 200;
+
+    createButton(this, mob ? cx - btnW / 2 - 4 : cx - 110, btnY, 'INVENTORY', () => {
+      this.scene.start('Inventory');
+    }, { color: COLORS.elec2, width: btnW });
+
+    createButton(this, mob ? cx + btnW / 2 + 4 : cx + 110, btnY, 'CONTINUE ▶', () => {
+      this.proceed();
+    }, { color: COLORS.copper, width: btnW });
   }
 
-  private collectPart(part: Part): void {
-    AudioManager.playSalvageClick();
-    this.collected.add(part.id);
-    runState.addToInventory(part);
-    metaState.discoverPart(part.name);
-    SaveManager.saveAll();
-    // Re-render
-    this.scene.restart({
-      roomType: this.sceneData.roomType,
-      zone: this.sceneData.zone,
-      splitPending: this.sceneData.splitPending,
-      nextScene: this.sceneData.nextScene,
+  private drawLootCard(x: number, y: number, w: number, h: number, part: Part, index: number): void {
+    const rc = rarityColor(part.rarity);
+    const rcNum = rarityColorNum(part.rarity);
+
+    // Animate card entry (staggered)
+    const container = this.add.container(x, y).setAlpha(0).setScale(0.8);
+    this.tweens.add({
+      targets: container,
+      alpha: 1, scaleX: 1, scaleY: 1,
+      duration: 300,
+      delay: index * 120,
+      ease: 'Back.easeOut',
+    });
+
+    // Card background
+    container.add(this.add.rectangle(0, 0, w, h, COLORS.surface)
+      .setStrokeStyle(1, COLORS.border, 0.4));
+
+    // Rarity accents
+    container.add(this.add.rectangle(-w / 2 + 1.5, 0, 3, h - 2, rcNum, 0.9));
+    container.add(this.add.rectangle(0, -h / 2 + 0.5, w, 2, rcNum, 0.7));
+    container.add(this.add.rectangle(0, 0, w - 6, h - 6, rcNum, 0.03));
+
+    // "NEW" badge
+    container.add(this.add.text(w / 2 - 6, -h / 2 + 4, 'NEW', {
+      fontFamily: 'monospace', fontSize: '8px', color: '#4cae6e',
+      backgroundColor: '#0d1a10', padding: { x: 3, y: 1 },
+    }).setOrigin(1, 0));
+
+    // Part name
+    container.add(this.add.text(0, -h / 2 + 18, part.name, {
+      fontFamily: 'monospace', fontSize: '12px', color: rc, letterSpacing: 1,
+    }).setOrigin(0.5));
+
+    // Rarity + Category
+    container.add(this.add.text(0, -h / 2 + 34, `${part.rarity.toUpperCase()} | ${part.category.replace(/_/g, ' ').toUpperCase()}`, {
+      fontFamily: 'monospace', fontSize: '8px', color: '#a89878', letterSpacing: 1,
+    }).setOrigin(0.5));
+
+    // Power source dot + label
+    const srcColors: Record<string, number> = { steam: 0xe8913a, electric: 0x2aa8d4, soul: 0x9b52d4 };
+    container.add(this.add.rectangle(-20, -h / 2 + 48, 6, 6, srcColors[part.powerSource] ?? COLORS.copper));
+    container.add(this.add.text(-12, -h / 2 + 44, part.powerSource.toUpperCase(), {
+      fontFamily: 'monospace', fontSize: '9px',
+      color: '#' + (srcColors[part.powerSource] ?? COLORS.copper).toString(16).padStart(6, '0'),
+    }));
+
+    // Stat mods
+    let sy = -h / 2 + 64;
+    for (const mod of part.statMods) {
+      const sign = mod.value >= 0 ? '+' : '';
+      const color = mod.value >= 0 ? '#4cae6e' : '#c0432e';
+      container.add(this.add.text(0, sy, `${mod.stat.toUpperCase()} ${sign}${mod.value}`, {
+        fontFamily: 'monospace', fontSize: '11px', color, letterSpacing: 1,
+      }).setOrigin(0.5));
+      sy += 18;
+    }
+
+    // Heat cost
+    container.add(this.add.text(0, sy + 4, `HEAT -${part.heatCost}T`, {
+      fontFamily: 'monospace', fontSize: '10px', color: '#c0432e',
+    }).setOrigin(0.5));
+
+    // Virus risk
+    if (part.virusChance && part.virusChance > 0) {
+      container.add(this.add.text(0, sy + 20, `☣ VIRUS ${Math.round(part.virusChance * 100)}%`, {
+        fontFamily: 'monospace', fontSize: '9px', color: '#c0432e',
+      }).setOrigin(0.5));
+    }
+
+    // Ability hint
+    if (part.ability) {
+      container.add(this.add.text(0, h / 2 - 14, `⚔ ${part.ability.name}`, {
+        fontFamily: 'monospace', fontSize: '8px', color: '#f5c563',
+      }).setOrigin(0.5));
+    }
+
+    // Collect SFX
+    this.time.delayedCall(200 + index * 120, () => {
+      AudioManager.playSalvageClick();
     });
   }
 
-  private returnToMap(): void {
+  private proceed(): void {
     if (this.sceneData.splitPending) {
       this.scene.start('Split', this.sceneData.splitPending);
       return;

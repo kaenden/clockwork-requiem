@@ -8,6 +8,7 @@ import { pickTerminalEvent, type TerminalChoice } from '@/data/roomEvents';
 import { LORE_ENTRIES } from '@/data/lore';
 import { AudioManager } from '@/systems/AudioManager';
 import { fadeIn } from '@/ui/SceneTransition';
+import { createButton } from '@/ui/UIKit';
 import { isMobile } from '@/utils/Mobile';
 
 export class TerminalScene extends Phaser.Scene {
@@ -86,11 +87,10 @@ export class TerminalScene extends Phaser.Scene {
         .on('pointerdown', () => this.applyChoice(choice));
     });
 
-    this.add.text(cx, GAME_HEIGHT - 30, '[ SKIP — NO CHANGE ]', {
-      fontFamily: 'monospace', fontSize: '11px', color: '#a89878', letterSpacing: 2,
-    }).setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .on('pointerdown', () => { runState.clearCurrentRoom(); this.scene.start('Map'); });
+    createButton(this, cx, GAME_HEIGHT - 30, '← SKIP', () => {
+      runState.clearCurrentRoom();
+      this.scene.start('Map');
+    }, { color: COLORS.border, width: mob ? GAME_WIDTH - 40 : 200 });
   }
 
   private applyChoice(choice: TerminalChoice): void {

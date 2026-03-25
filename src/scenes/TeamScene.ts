@@ -3,6 +3,8 @@ import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '@/data/constants';
 import { runState } from '@/state/RunStateManager';
 import { computeStats, getOverloadPhase } from '@/systems/StatEngine';
 import { SaveManager } from '@/utils/SaveManager';
+import { createButton } from '@/ui/UIKit';
+import { isMobile } from '@/utils/Mobile';
 import type { Directive, PowerSource, UnitConfig } from '@/types';
 
 const DIRECTIVES: { key: Directive; label: string; desc: string }[] = [
@@ -42,13 +44,11 @@ export class TeamScene extends Phaser.Scene {
     }
 
     // Back button
-    this.add.text(40, GAME_HEIGHT - 28, '[ BACK TO MAP ]', {
-      fontFamily: 'monospace', fontSize: '14px', color: '#c8b89a', letterSpacing: 2,
-    }).setInteractive({ useHandCursor: true })
-      .on('pointerdown', () => {
-        SaveManager.saveAll();
-        this.scene.start('Map');
-      });
+    const mob = isMobile();
+    createButton(this, mob ? GAME_WIDTH / 2 : 100, GAME_HEIGHT - 28, '← BACK TO MAP', () => {
+      SaveManager.saveAll();
+      this.scene.start('Map');
+    }, { color: COLORS.copper, width: mob ? GAME_WIDTH - 40 : 200 });
   }
 
   private drawUnitCard(unit: UnitConfig, x: number, cardW: number): void {
