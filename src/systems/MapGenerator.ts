@@ -1,5 +1,15 @@
 import type { MapNode, Zone, RoomType } from '@/types';
-import { ZONE_ROOMS_MIN, ZONE_ROOMS_MAX, GAME_WIDTH, GAME_HEIGHT } from '@/data/constants';
+import { GAME_WIDTH, GAME_HEIGHT } from '@/data/constants';
+
+/**
+ * Slay the Spire-style vertical map generator.
+ *
+ * Layout: bottom-to-top, multiple floors (rows).
+ * Each floor has 2-4 nodes spread horizontally.
+ * Paths go upward, can branch but never cross.
+ * Boss always at the top as a single node.
+ * Guaranteed rooms: at least 1 repair, 1 elite.
+ */
 
 let nodeIdCounter = 0;
 
@@ -11,96 +21,140 @@ function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-// Zone bias — more rooms of the matching power source type
-const ZONE_ROOM_WEIGHTS: Record<Zone, RoomType[]> = {
+// Room distribution per zone
+const ZONE_ROOM_POOL: Record<Zone, RoomType[]> = {
   boiler_works:     ['battle', 'battle', 'battle', 'repair', 'terminal', 'elite', 'market'],
   voltage_archives: ['battle', 'battle', 'battle', 'terminal', 'terminal', 'elite', 'repair'],
   soul_labs:        ['battle', 'battle', 'elite', 'elite', 'terminal', 'repair', 'market'],
   kenet_heart:      ['battle', 'battle', 'battle', 'elite', 'elite', 'repair', 'terminal'],
 };
 
-// Rooms that must appear at least once per zone
-const GUARANTEED_ROOMS: RoomType[] = ['repair'];
+// Floor-specific room rules (Slay the Spire style)
+function getRoomForFloor(zone: Zone, floor: number, totalFloors: number): RoomType {
+  // Floor 0 (start): always battle
+  if (floor === 0) return 'battle';
+  // Last floor: always boss
+  if (floor === totalFloors - 1) return 'boss';
+  // Floor before boss: repair or market (rest stop)
+  if (floor === totalFloors - 2) return Math.random() > 0.5 ? 'repair' : 'market';
+  // Mid-zone elite (around 60% mark)
+  if (floor === Math.floor(totalFloors * 0.6)) return 'elite';
+
+  return pick(ZONE_ROOM_POOL[zone]);
+}
 
 export const MapGenerator = {
   generate(zone: Zone, zoneIndex: number): MapNode[] {
-    const totalRooms = rng(ZONE_ROOMS_MIN, ZONE_ROOMS_MAX);
-    const layers = 4 + zoneIndex; // more layers in later zones
-    const roomsPerLayer = Math.max(2, Math.ceil(totalRooms / layers));
-
+    const totalFloors = 6 + zoneIndex; // 6-9 floors
     const nodes: MapNode[] = [];
-    const layerNodes: string[][] = [];
+    const floors: string[][] = [];
 
-    const startY = 100;
-    const endY = GAME_HEIGHT - 80;
-    const layerSpacing = (endY - startY) / (layers + 1);
-    const startX = 200;
-    const endX = GAME_WIDTH - 200;
+    // Map layout constants
+    const mapPadX = 140;
+    const mapTopY = 80;
+    const mapBotY = GAME_HEIGHT - 90;
+    const floorSpacing = (mapBotY - mapTopY) / (totalFloors - 1);
 
-    // Generate layers
-    for (let layer = 0; layer < layers; layer++) {
-      const count = layer === layers - 1 ? 1 : rng(2, Math.min(3, roomsPerLayer));
-      const y = startY + layerSpacing * (layer + 1);
-      const ids: string[] = [];
-      const xSpacing = (endX - startX) / (count + 1);
+    // ── Generate floors bottom-to-top ──
+    for (let f = 0; f < totalFloors; f++) {
+      const isFirst = f === 0;
+      const isLast = f === totalFloors - 1;
+      const isPreBoss = f === totalFloors - 2;
 
-      for (let i = 0; i < count; i++) {
+      // Node count: first/last = special, others = 2-4
+      let nodeCount: number;
+      if (isLast) nodeCount = 1;             // Boss is always alone
+      else if (isFirst) nodeCount = rng(2, 3); // Starting floor
+      else if (isPreBoss) nodeCount = rng(2, 3); // Rest floor
+      else nodeCount = rng(2, 4);            // Normal floors
+
+      // Y position: bottom = first floor, top = boss
+      const y = Math.round(mapBotY - f * floorSpacing);
+
+      // X positions: evenly spaced with jitter
+      const usableW = GAME_WIDTH - mapPadX * 2;
+      const xStep = usableW / (nodeCount + 1);
+      const floorIds: string[] = [];
+
+      for (let i = 0; i < nodeCount; i++) {
         const id = `node_${++nodeIdCounter}`;
-        const isLastLayer = layer === layers - 1;
-        const type: RoomType = isLastLayer ? 'boss' : pick(ZONE_ROOM_WEIGHTS[zone]);
-        const x = startX + xSpacing * (i + 1) + rng(-20, 20);
+        const type = getRoomForFloor(zone, f, totalFloors);
+        const baseX = mapPadX + xStep * (i + 1);
+        const jitterX = isLast || isFirst ? 0 : rng(-15, 15);
+        const x = Math.round(baseX + jitterX);
 
-        nodes.push({
-          id,
-          type,
-          x,
-          y,
-          connections: [],
-          visited: false,
-          cleared: false,
-        });
-
-        ids.push(id);
+        nodes.push({ id, type, x, y, connections: [], visited: false, cleared: false });
+        floorIds.push(id);
       }
 
-      layerNodes.push(ids);
+      floors.push(floorIds);
     }
 
-    // Guarantee at least one repair room exists (swap a random non-boss node)
-    for (const required of GUARANTEED_ROOMS) {
-      const nonBoss = nodes.filter(n => n.type !== 'boss');
-      if (!nonBoss.some(n => n.type === required) && nonBoss.length > 0) {
-        const swapTarget = nonBoss[Math.floor(Math.random() * nonBoss.length)];
-        swapTarget.type = required;
-      }
+    // ── Guarantee required rooms ──
+    const nonSpecial = nodes.filter(n => n.type !== 'boss' && floors[0].indexOf(n.id) === -1);
+    if (!nonSpecial.some(n => n.type === 'repair') && nonSpecial.length > 0) {
+      pick(nonSpecial.filter(n => n.type === 'battle') || nonSpecial).type = 'repair';
+    }
+    if (!nonSpecial.some(n => n.type === 'elite') && nonSpecial.length > 1) {
+      const candidates = nonSpecial.filter(n => n.type === 'battle');
+      if (candidates.length > 0) candidates[0].type = 'elite';
     }
 
-    // Connect layers (each node connects to 1-2 nodes in the next layer)
-    for (let layer = 0; layer < layerNodes.length - 1; layer++) {
-      const currentIds = layerNodes[layer];
-      const nextIds = layerNodes[layer + 1];
+    // ── Connect floors (bottom → top, no crossing) ──
+    for (let f = 0; f < floors.length - 1; f++) {
+      const currentIds = floors[f];
+      const nextIds = floors[f + 1];
+      const currentNodes = currentIds.map(id => nodes.find(n => n.id === id)!);
+      const nextNodes = nextIds.map(id => nodes.find(n => n.id === id)!);
 
-      for (const id of currentIds) {
-        const node = nodes.find(n => n.id === id)!;
-        // Connect to at least one node in the next layer
-        const primaryTarget = pick(nextIds);
-        node.connections.push(primaryTarget);
+      // Sort both by x position for non-crossing paths
+      currentNodes.sort((a, b) => a.x - b.x);
+      nextNodes.sort((a, b) => a.x - b.x);
 
-        // Maybe connect to a second
-        if (nextIds.length > 1 && Math.random() > 0.5) {
-          const secondTarget = pick(nextIds.filter(nid => nid !== primaryTarget));
-          if (secondTarget) node.connections.push(secondTarget);
+      // Strategy: each current node connects to the closest next node(s)
+      const connected = new Set<string>();
+
+      for (const curr of currentNodes) {
+        // Find closest next node by x distance
+        let closest = nextNodes[0];
+        let closestDist = Math.abs(curr.x - closest.x);
+        for (const next of nextNodes) {
+          const dist = Math.abs(curr.x - next.x);
+          if (dist < closestDist) {
+            closest = next;
+            closestDist = dist;
+          }
+        }
+
+        curr.connections.push(closest.id);
+        connected.add(closest.id);
+
+        // 40% chance to also connect to an adjacent next node (branching)
+        if (nextNodes.length > 1 && Math.random() < 0.4) {
+          const idx = nextNodes.indexOf(closest);
+          const adj = nextNodes[idx + 1] ?? nextNodes[idx - 1];
+          if (adj && !curr.connections.includes(adj.id)) {
+            // Only add if it doesn't create a crossing
+            const canConnect = !wouldCross(curr, adj, currentNodes, nextNodes, nodes);
+            if (canConnect) {
+              curr.connections.push(adj.id);
+              connected.add(adj.id);
+            }
+          }
         }
       }
 
-      // Ensure every next-layer node has at least one incoming connection
-      for (const nextId of nextIds) {
-        const hasIncoming = currentIds.some(id =>
-          nodes.find(n => n.id === id)!.connections.includes(nextId)
-        );
-        if (!hasIncoming) {
-          const randomCurrent = pick(currentIds);
-          nodes.find(n => n.id === randomCurrent)!.connections.push(nextId);
+      // Ensure every next-floor node has at least one incoming
+      for (const next of nextNodes) {
+        if (!connected.has(next.id)) {
+          // Connect from nearest current node
+          let nearest = currentNodes[0];
+          let nearDist = Math.abs(next.x - nearest.x);
+          for (const cn of currentNodes) {
+            const d = Math.abs(next.x - cn.x);
+            if (d < nearDist) { nearest = cn; nearDist = d; }
+          }
+          nearest.connections.push(next.id);
         }
       }
     }
@@ -108,3 +162,38 @@ export const MapGenerator = {
     return nodes;
   },
 };
+
+/** Check if connecting curr→target would cross existing connections */
+function wouldCross(
+  curr: MapNode, target: MapNode,
+  currentNodes: MapNode[], nextNodes: MapNode[],
+  allNodes: MapNode[],
+): boolean {
+  for (const other of currentNodes) {
+    if (other.id === curr.id) continue;
+    for (const connId of other.connections) {
+      const otherTarget = allNodes.find(n => n.id === connId);
+      if (!otherTarget) continue;
+
+      // Check if lines cross: curr→target vs other→otherTarget
+      if (linesIntersect(
+        curr.x, curr.y, target.x, target.y,
+        other.x, other.y, otherTarget.x, otherTarget.y
+      )) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function linesIntersect(
+  x1: number, y1: number, x2: number, y2: number,
+  x3: number, y3: number, x4: number, y4: number
+): boolean {
+  const denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+  if (Math.abs(denom) < 0.001) return false;
+  const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom;
+  const u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / denom;
+  return t > 0.05 && t < 0.95 && u > 0.05 && u < 0.95;
+}
