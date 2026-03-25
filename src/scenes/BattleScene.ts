@@ -15,6 +15,7 @@ import { Tooltip } from '@/ui/Tooltip';
 import { BODY_BONUSES } from '@/data/classTree';
 import { WEAPON_BONUSES } from '@/data/classTree';
 import { getComboAbility } from '@/data/comboAbilities';
+import { drawArenaBackground } from '@/ui/ArenaBackground';
 import { isMobile } from '@/utils/Mobile';
 import type { RoomType, UnitConfig } from '@/types';
 
@@ -120,18 +121,10 @@ export class BattleScene extends Phaser.Scene {
     const arenaBot = mob ? GAME_HEIGHT - 180 : GAME_HEIGHT - 220;
     const arenaH = arenaBot - arenaTop;
 
-    // Arena background (subtle grid)
-    this.add.rectangle(cx, arenaTop + arenaH / 2, GAME_WIDTH, arenaH, 0x0f0e0d, 0.5);
-    // Grid lines
-    const gfx = this.add.graphics();
-    gfx.lineStyle(1, COLORS.border, 0.1);
-    for (let gy = arenaTop; gy < arenaBot; gy += 40) {
-      gfx.lineBetween(0, gy, GAME_WIDTH, gy);
-    }
-    // Center divider
-    gfx.lineStyle(1, COLORS.border, 0.25);
-    gfx.lineBetween(cx, arenaTop, cx, arenaBot);
-    // VS text
+    // Zone-themed industrial arena background
+    drawArenaBackground(this, state.zone, this.roomType, arenaTop, arenaBot);
+
+    // VS text (over background)
     this.add.text(cx, arenaTop + arenaH / 2, 'VS', {
       fontFamily: 'monospace', fontSize: '20px', color: '#2a2620', letterSpacing: 4,
     }).setOrigin(0.5);
