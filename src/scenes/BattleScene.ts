@@ -10,7 +10,11 @@ import { SaveManager } from '@/utils/SaveManager';
 import { AudioManager } from '@/systems/AudioManager';
 import { fadeIn } from '@/ui/SceneTransition';
 import { RobotRenderer } from '@/ui/RobotRenderer';
-import { powerColor } from '@/ui/UIKit';
+import { powerColor, FONT } from '@/ui/UIKit';
+import { Tooltip } from '@/ui/Tooltip';
+import { BODY_BONUSES } from '@/data/classTree';
+import { WEAPON_BONUSES } from '@/data/classTree';
+import { getComboAbility } from '@/data/comboAbilities';
 import { isMobile } from '@/utils/Mobile';
 import type { RoomType, UnitConfig } from '@/types';
 
@@ -27,10 +31,23 @@ interface ArenaUnit {
   sprite: Phaser.GameObjects.Image;
   hpBar: Phaser.GameObjects.Rectangle;
   hpTrack: Phaser.GameObjects.Rectangle;
+  heatBar?: Phaser.GameObjects.Rectangle;
+  heatTrack?: Phaser.GameObjects.Rectangle;
+  buffContainer?: Phaser.GameObjects.Container;
   label: Phaser.GameObjects.Text;
   baseX: number;
   baseY: number;
   id: string;
+}
+
+// Battle stats tracker for post-battle summary
+interface BattleStats {
+  totalDamageDealt: number;
+  totalDamageTaken: number;
+  totalHealing: number;
+  kills: number;
+  abilitiesUsed: number;
+  overloads: number;
 }
 
 export class BattleScene extends Phaser.Scene {
@@ -41,6 +58,9 @@ export class BattleScene extends Phaser.Scene {
   private turnIndex = 0;
   private logText!: Phaser.GameObjects.Text;
   private arenaUnits: Map<string, ArenaUnit> = new Map();
+  private battleStats: Map<string, BattleStats> = new Map();
+  private tooltip!: Tooltip;
+  private inspectPopup: Phaser.GameObjects.Container | null = null;
 
   constructor() {
     super('Battle');
@@ -50,15 +70,23 @@ export class BattleScene extends Phaser.Scene {
     this.roomType = data.roomType ?? 'battle';
     this.turnIndex = 0;
     this.arenaUnits.clear();
+    this.battleStats.clear();
+    this.inspectPopup = null;
   }
 
   create(): void {
     AudioManager.setMode(this.roomType === 'boss' ? 'boss' : 'battle');
     fadeIn(this);
+    this.tooltip = new Tooltip(this);
     const state = runState.get();
     const mob = isMobile();
     const cx = GAME_WIDTH / 2;
     this.realAllies = state.units.filter(u => u.alive);
+
+    // Init battle stats tracking
+    for (const u of [...state.units.filter(u => u.alive), ...this.enemies]) {
+      this.battleStats.set(u.id, { totalDamageDealt: 0, totalDamageTaken: 0, totalHealing: 0, kills: 0, abilitiesUsed: 0, overloads: 0 });
+    }
 
     // Generate enemies (with ascension scaling)
     this.enemies = EnemyFactory.generateEnemies(state.zone, state.zoneIndex, this.roomType, state.ascension);
@@ -130,10 +158,25 @@ export class BattleScene extends Phaser.Scene {
 
       // HP bar under name
       const barW = spriteSize + 10;
-      const hpTrack = this.add.rectangle(ux, uy + spriteSize / 2 + 16, barW, 4, COLORS.border);
-      const hpBar = this.add.rectangle(ux - barW / 2, uy + spriteSize / 2 + 16, barW, 4, COLORS.safe).setOrigin(0, 0.5);
+      const barY = uy + spriteSize / 2 + 16;
+      const hpTrack = this.add.rectangle(ux, barY, barW, 4, COLORS.border);
+      const hpBar = this.add.rectangle(ux - barW / 2, barY, barW, 4, COLORS.safe).setOrigin(0, 0.5);
 
-      this.arenaUnits.set(unit.id, { sprite, hpBar, hpTrack, label: nameLabel, baseX: ux, baseY: uy, id: unit.id });
+      // Heat bar (thin orange bar below HP)
+      const heatTrack = this.add.rectangle(ux, barY + 6, barW, 2, COLORS.border, 0.4);
+      const heatPct = unit.stats.thresh > 0 ? unit.stats.heat / unit.stats.thresh : 0;
+      const heatBar = this.add.rectangle(ux - barW / 2, barY + 6, barW * heatPct, 2,
+        heatPct > 0.7 ? COLORS.meltdown : COLORS.warning
+      ).setOrigin(0, 0.5);
+
+      // Buff/debuff container (icons below bars)
+      const buffContainer = this.add.container(ux - barW / 2, barY + 12);
+
+      // Tap-to-inspect: click sprite to show unit detail
+      sprite.setInteractive({ useHandCursor: true });
+      sprite.on('pointerdown', () => this.showInspectPopup(unit, ux, uy));
+
+      this.arenaUnits.set(unit.id, { sprite, hpBar, hpTrack, heatBar, heatTrack, buffContainer, label: nameLabel, baseX: ux, baseY: uy, id: unit.id });
     });
 
     // ── Place enemy sprites (right side) ──
@@ -153,10 +196,23 @@ export class BattleScene extends Phaser.Scene {
       }).setOrigin(0.5);
 
       const barW = spriteSize + 10;
-      const hpTrack = this.add.rectangle(ex, ey + spriteSize / 2 + 16, barW, 4, COLORS.border);
-      const hpBar = this.add.rectangle(ex - barW / 2, ey + spriteSize / 2 + 16, barW, 4, COLORS.rust2).setOrigin(0, 0.5);
+      const eBarY = ey + spriteSize / 2 + 16;
+      const hpTrack = this.add.rectangle(ex, eBarY, barW, 4, COLORS.border);
+      const hpBar = this.add.rectangle(ex - barW / 2, eBarY, barW, 4, COLORS.rust2).setOrigin(0, 0.5);
 
-      this.arenaUnits.set(enemy.id, { sprite, hpBar, hpTrack, label: nameLabel, baseX: ex, baseY: ey, id: enemy.id });
+      // Heat bar for enemies
+      const heatTrack = this.add.rectangle(ex, eBarY + 6, barW, 2, COLORS.border, 0.4);
+      const heatPct = enemy.stats.thresh > 0 ? enemy.stats.heat / enemy.stats.thresh : 0;
+      const heatBar = this.add.rectangle(ex - barW / 2, eBarY + 6, barW * heatPct, 2, COLORS.warning).setOrigin(0, 0.5);
+
+      // Buff container
+      const buffContainer = this.add.container(ex - barW / 2, eBarY + 12);
+
+      // Tap-to-inspect
+      sprite.setInteractive({ useHandCursor: true });
+      sprite.on('pointerdown', () => this.showInspectPopup(enemy, ex, ey));
+
+      this.arenaUnits.set(enemy.id, { sprite, hpBar, hpTrack, heatBar, heatTrack, buffContainer, label: nameLabel, baseX: ex, baseY: ey, id: enemy.id });
     });
 
     // ── Battle Log (bottom) ──
@@ -191,6 +247,22 @@ export class BattleScene extends Phaser.Scene {
       lines.push(`  ${act.actorName} -> ${act.targetName}: ${act.damage} DMG${sp}`);
     }
     for (const evt of turn.overloadEvents) lines.push(`  [!] ${evt}`);
+
+    // Track battle stats
+    for (const act of turn.actions) {
+      const atkStats = this.battleStats.get(act.actorId);
+      const defStats = this.battleStats.get(act.targetId);
+      if (atkStats) {
+        atkStats.totalDamageDealt += act.damage;
+        if (act.special) atkStats.abilitiesUsed++;
+      }
+      if (defStats) defStats.totalDamageTaken += act.damage;
+    }
+    for (const evt of turn.overloadEvents) {
+      for (const [id, stats] of this.battleStats) {
+        if (evt.includes(id) || evt.includes('OVERLOADED')) stats.overloads++;
+      }
+    }
 
     const currentLog = this.logText.text;
     const allLines = currentLog ? currentLog.split('\n').concat(lines) : lines;
@@ -281,6 +353,34 @@ export class BattleScene extends Phaser.Scene {
       const hpPct = Math.max(0, snap.hp / snap.maxHp);
       au.hpBar.width = barW * hpPct;
       au.hpBar.fillColor = snap.alive ? (hpPct > 0.5 ? COLORS.safe : hpPct > 0.25 ? COLORS.warning : COLORS.critical) : COLORS.rust2;
+
+      // Update heat bar
+      if (au.heatBar) {
+        const heatPct = snap.thresh > 0 ? Math.min(snap.heat / snap.thresh, 1) : 0;
+        au.heatBar.width = barW * heatPct;
+        au.heatBar.fillColor = heatPct > 0.9 ? COLORS.meltdown : heatPct > 0.7 ? COLORS.critical : heatPct > 0.4 ? COLORS.warning : COLORS.safe;
+      }
+
+      // Update buff/debuff icons
+      if (au.buffContainer && snap.statusEffects) {
+        au.buffContainer.removeAll(true);
+        let bx = 0;
+        for (const eff of snap.statusEffects) {
+          const icons: Record<string, { sym: string; col: string }> = {
+            rust: { sym: '🔧', col: '#c0732a' },
+            short_circuit: { sym: '⚡', col: '#2aa8d4' },
+            overheat: { sym: '🔥', col: '#c0432e' },
+            freeze: { sym: '❄', col: '#88ccff' },
+            kenet_infection: { sym: '☣', col: '#ff2020' },
+            resonance: { sym: '🌀', col: '#9b52d4' },
+          };
+          const icon = icons[eff.type] ?? { sym: '•', col: '#888' };
+          au.buffContainer.add(this.add.text(bx, 0, icon.sym, {
+            fontFamily: 'monospace', fontSize: '9px', color: icon.col,
+          }));
+          bx += 14;
+        }
+      }
 
       if (!snap.alive && au.sprite.alpha > 0.3) {
         // Death animation
@@ -396,6 +496,9 @@ export class BattleScene extends Phaser.Scene {
       u.alive && ((u.level >= 10 && !u.bodyType) || (u.level >= 20 && u.bodyType && !u.weaponModule))
     );
 
+    // ── Post-battle summary ──
+    this.showPostBattleSummary(won, mob, cx);
+
     this.time.delayedCall(2200, () => {
       if (!won) {
         runState.end(false);
@@ -424,5 +527,192 @@ export class BattleScene extends Phaser.Scene {
         } : null,
       });
     });
+  }
+
+  // ── Tap-to-inspect: show unit detail popup ──
+  private showInspectPopup(unit: UnitConfig, ux: number, uy: number): void {
+    // Toggle off if same unit
+    if (this.inspectPopup) {
+      this.inspectPopup.destroy();
+      this.inspectPopup = null;
+      return;
+    }
+
+    const mob = isMobile();
+    const popW = mob ? 220 : 260;
+    const popH = 140;
+    const pc = powerColor(unit.powerSource);
+    const pcStr = '#' + pc.toString(16).padStart(6, '0');
+    const isAlly = this.realAllies.some(u => u.id === unit.id);
+
+    // Position popup near the unit but on-screen
+    let px = ux + (isAlly ? 60 : -popW - 20);
+    let py = uy - popH / 2;
+    if (px < 10) px = 10;
+    if (px + popW > GAME_WIDTH - 10) px = GAME_WIDTH - popW - 10;
+    if (py < 36) py = 36;
+    if (py + popH > GAME_HEIGHT - 10) py = GAME_HEIGHT - popH - 10;
+
+    const c = this.add.container(px, py).setDepth(600);
+
+    // Background
+    c.add(this.add.rectangle(popW / 2, popH / 2, popW, popH, 0x121110, 0.96)
+      .setStrokeStyle(1, pc, 0.7));
+    c.add(this.add.rectangle(popW / 2, 1, popW, 2, pc, 0.8));
+
+    // Name + level
+    c.add(this.add.text(8, 6, `${unit.name}  Lv.${unit.level}`, {
+      fontFamily: 'monospace', fontSize: '11px', color: unit.isAxiom ? '#f5c563' : '#e8dcc8',
+    }));
+    c.add(this.add.text(8, 22, unit.powerSource.toUpperCase(), {
+      fontFamily: 'monospace', fontSize: '9px', color: pcStr,
+    }));
+
+    // Stats
+    const s = unit.stats;
+    const statLines = [
+      { label: 'HP', val: `${s.hp}/${s.maxHp}`, color: '#4cae6e' },
+      { label: 'ATK', val: `${s.atk}`, color: '#c0432e' },
+      { label: 'DEF', val: `${s.def}`, color: '#2aa8d4' },
+      { label: 'SPD', val: `${s.spd}`, color: '#f0a84a' },
+      { label: 'HEAT', val: `${s.heat}/${s.thresh}`, color: s.heat > s.thresh * 0.7 ? '#c0432e' : '#c0732a' },
+      { label: 'SYN', val: `${s.syn}`, color: '#9b52d4' },
+    ];
+
+    let sy = 38;
+    for (const st of statLines) {
+      c.add(this.add.text(8, sy, st.label, { fontFamily: 'monospace', fontSize: '9px', color: '#a89878' }));
+      c.add(this.add.text(50, sy, st.val, { fontFamily: 'monospace', fontSize: '9px', color: st.color }));
+      sy += 13;
+    }
+
+    // Body + weapon + combo (right column)
+    let ry = 38;
+    if (unit.bodyType) {
+      c.add(this.add.text(110, ry, `BODY: ${unit.bodyType.toUpperCase()}`, {
+        fontFamily: 'monospace', fontSize: '8px', color: '#4cae6e',
+      }));
+      ry += 12;
+    }
+    if (unit.weaponModule) {
+      const wpn = WEAPON_BONUSES[unit.weaponModule];
+      c.add(this.add.text(110, ry, `WPN: ${wpn?.abilityName ?? unit.weaponModule}`, {
+        fontFamily: 'monospace', fontSize: '8px', color: '#2aa8d4',
+      }));
+      ry += 12;
+    }
+    const combo = getComboAbility(unit.bodyType, unit.weaponModule);
+    if (combo) {
+      c.add(this.add.text(110, ry, `${combo.icon} ${combo.name}`, {
+        fontFamily: 'monospace', fontSize: '8px', color: '#f0a84a',
+      }));
+      ry += 12;
+    }
+
+    // Status effects
+    if (unit.statusEffects.length > 0) {
+      c.add(this.add.text(110, ry, 'STATUS:', { fontFamily: 'monospace', fontSize: '8px', color: '#a89878' }));
+      ry += 12;
+      for (const eff of unit.statusEffects) {
+        c.add(this.add.text(110, ry, `${eff.type} (${eff.duration}t)`, {
+          fontFamily: 'monospace', fontSize: '8px', color: '#c0432e',
+        }));
+        ry += 11;
+      }
+    }
+
+    // Directive
+    if (isAlly) {
+      c.add(this.add.text(8, popH - 18, `DIR: ${unit.directive.toUpperCase()}`, {
+        fontFamily: 'monospace', fontSize: '8px', color: '#a89878',
+      }));
+    }
+
+    // Parts count
+    c.add(this.add.text(popW - 8, popH - 18, `${unit.parts.length} PARTS`, {
+      fontFamily: 'monospace', fontSize: '8px', color: '#6a5e50',
+    }).setOrigin(1, 0));
+
+    // Close button
+    c.add(this.add.text(popW - 4, 4, '✕', {
+      fontFamily: 'monospace', fontSize: '11px', color: '#a89878',
+      backgroundColor: '#0d0c0b', padding: { x: 3, y: 0 },
+    }).setOrigin(1, 0).setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => {
+        c.destroy();
+        this.inspectPopup = null;
+      }));
+
+    this.inspectPopup = c;
+  }
+
+  // ── Post-battle summary ──
+  private showPostBattleSummary(won: boolean, mob: boolean, cx: number): void {
+    // Compute per-unit stats from tracked data
+    const allUnits = [...this.realAllies, ...this.enemies];
+    const allyIds = new Set(this.realAllies.map(u => u.id));
+
+    // Team totals
+    let teamDmg = 0, teamTaken = 0, teamKills = 0, teamAbilities = 0;
+    for (const u of this.realAllies) {
+      const s = this.battleStats.get(u.id);
+      if (s) {
+        teamDmg += s.totalDamageDealt;
+        teamTaken += s.totalDamageTaken;
+        teamAbilities += s.abilitiesUsed;
+      }
+    }
+    teamKills = this.enemies.filter(e => !e.alive).length;
+
+    // MVP (highest damage ally)
+    let mvpName = '';
+    let mvpDmg = 0;
+    for (const u of this.realAllies) {
+      const s = this.battleStats.get(u.id);
+      if (s && s.totalDamageDealt > mvpDmg) {
+        mvpDmg = s.totalDamageDealt;
+        mvpName = u.name;
+      }
+    }
+
+    // Summary panel (below the victory/defeat box)
+    const sumY = GAME_HEIGHT / 2 - 20;
+    const sumW = mob ? GAME_WIDTH - 30 : 420;
+    const sumH = 70;
+
+    this.add.rectangle(cx, sumY + sumH / 2, sumW, sumH, COLORS.surface, 0.9)
+      .setStrokeStyle(1, COLORS.border).setDepth(100);
+
+    // Title
+    this.add.text(cx, sumY + 4, 'BATTLE SUMMARY', {
+      fontFamily: 'monospace', fontSize: '9px', color: '#a89878', letterSpacing: 3,
+    }).setOrigin(0.5).setDepth(101);
+
+    // Stats row
+    const stats = [
+      { label: 'DMG DEALT', val: `${teamDmg}`, color: '#c0432e' },
+      { label: 'DMG TAKEN', val: `${teamTaken}`, color: '#ff6b4a' },
+      { label: 'KILLS', val: `${teamKills}`, color: '#4cae6e' },
+      { label: 'ABILITIES', val: `${teamAbilities}`, color: '#2aa8d4' },
+      { label: 'TURNS', val: `${this.result.totalTurns}`, color: '#f0a84a' },
+    ];
+
+    const colW = sumW / stats.length;
+    stats.forEach((s, i) => {
+      const sx = cx - sumW / 2 + colW * i + colW / 2;
+      this.add.text(sx, sumY + 20, s.val, {
+        fontFamily: 'monospace', fontSize: '13px', color: s.color,
+      }).setOrigin(0.5).setDepth(101);
+      this.add.text(sx, sumY + 36, s.label, {
+        fontFamily: 'monospace', fontSize: '7px', color: '#6a5e50', letterSpacing: 1,
+      }).setOrigin(0.5).setDepth(101);
+    });
+
+    // MVP
+    if (mvpName && won) {
+      this.add.text(cx, sumY + 54, `MVP: ${mvpName} (${mvpDmg} DMG)`, {
+        fontFamily: 'monospace', fontSize: '9px', color: '#f5c563',
+      }).setOrigin(0.5).setDepth(101);
+    }
   }
 }

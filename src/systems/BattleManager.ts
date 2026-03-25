@@ -25,6 +25,7 @@ export interface UnitSnapshot {
   heat: number;
   thresh: number;
   alive: boolean;
+  statusEffects: { type: string; duration: number }[];
 }
 
 export interface BattleTurn {
@@ -271,6 +272,7 @@ export const BattleManager = {
       const snap = (u: UnitConfig): UnitSnapshot => ({
         id: u.id, hp: u.stats.hp, maxHp: u.stats.maxHp,
         heat: u.stats.heat, thresh: u.stats.thresh, alive: u.alive,
+        statusEffects: u.statusEffects.map(e => ({ type: e.type, duration: e.duration })),
       });
       turns.push({
         turnNumber, actions, statusLogs, overloadEvents,
