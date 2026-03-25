@@ -67,9 +67,14 @@ export function computeStats(unit: UnitConfig): UnitStats {
     base.thresh -= effectiveHeatCost(part, unit);
   }
 
-  // Ensure minimums
+  // Ensure minimums — prevent negative/zero stats
   base.thresh = Math.max(base.thresh, 10);
-  base.hp = Math.min(base.hp, base.maxHp);
+  base.maxHp = Math.max(base.maxHp, 1);
+  base.hp = Math.min(Math.max(base.hp, 0), base.maxHp);
+  base.atk = Math.max(base.atk, 0);
+  base.def = Math.max(base.def, 0);
+  base.spd = Math.max(base.spd, 1);
+  base.syn = Math.max(base.syn, 0);
 
   return base;
 }

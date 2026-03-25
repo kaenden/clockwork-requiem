@@ -101,7 +101,7 @@ export class MarketScene extends Phaser.Scene {
     const state = runState.get();
     if (state.consciousnessScore < item.cost) return;
 
-    state.consciousnessScore -= item.cost;
+    runState.addConsciousness(-item.cost);
     AudioManager.playSalvageClick();
 
     const units = state.units.filter(u => u.alive);

@@ -316,6 +316,8 @@ export const AbilityProcessor = {
     let counterDamage = 0;
     let reflectDamage = 0;
 
+    if (!defender.alive) return { counterDamage, reflectDamage, log };
+
     // Iron Bastion counter
     if (defender.weaponModule === 'iron_bastion' && defender.alive) {
       counterDamage = Math.round(defender.stats.atk * 0.5);

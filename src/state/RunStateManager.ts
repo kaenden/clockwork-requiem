@@ -132,7 +132,10 @@ class RunStateManager {
   }
 
   fromJSON(json: string): void {
-    this.state = JSON.parse(json);
+    this.state = { ...DEFAULT_RUN, ...JSON.parse(json) };
+    // Ensure keepsakes array exists for backward compatibility
+    if (!Array.isArray(this.state.keepsakes)) this.state.keepsakes = [];
+    if (!Array.isArray(this.state.inventory)) this.state.inventory = [];
     eventBus.emit('run:loaded', this.state);
   }
 }

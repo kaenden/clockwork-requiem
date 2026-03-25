@@ -241,6 +241,7 @@ export class MapScene extends Phaser.Scene {
     const currentId = runState.get().currentNodeId;
     if (!currentId) {
       const nodes = runState.get().map;
+      if (nodes.length === 0) return false;
       const minY = Math.min(...nodes.map(n => n.y));
       return node.y <= minY + 10;
     }

@@ -281,6 +281,15 @@ export const BattleManager = {
       });
 
       if (allies.every(u => !u.alive) || enemies.every(u => !u.alive)) break;
+
+      // Stalemate detection: if no actions for 3 consecutive turns, break
+      if (actions.length === 0 && turnNumber > 3) {
+        const recent = turns.slice(-3);
+        if (recent.every(t => t.actions.length === 0)) {
+          statusLogs.push('STALEMATE — all units incapacitated');
+          break;
+        }
+      }
     }
 
     const won = allies.some(u => u.alive);

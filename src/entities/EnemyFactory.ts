@@ -65,7 +65,7 @@ export const EnemyFactory = {
 
     // Boss — unique per zone
     if (roomType === 'boss') {
-      const boss = BOSS_CONFIG[zone];
+      const boss = BOSS_CONFIG[zone] ?? BOSS_CONFIG.boiler_works;
       const hpBase = Math.round(200 * boss.hpMult * difficulty * ascMult);
       const atkBase = Math.round(35 * boss.atkMult * difficulty * ascMult);
 

@@ -106,8 +106,10 @@ export class TerminalScene extends Phaser.Scene {
           results.push(`All: ${eff.stat!.toUpperCase()} ${eff.value >= 0 ? '+' : ''}${eff.value}`);
           break;
         case 'stat_axiom':
-          if (axiom) (axiom.stats as any)[eff.stat!] += eff.value;
-          results.push(`AXIOM: ${eff.stat!.toUpperCase()} ${eff.value >= 0 ? '+' : ''}${eff.value}`);
+          if (axiom) {
+            (axiom.stats as any)[eff.stat!] += eff.value;
+            results.push(`AXIOM: ${eff.stat!.toUpperCase()} ${eff.value >= 0 ? '+' : ''}${eff.value}`);
+          }
           break;
         case 'heal_all':
           for (const u of units) u.stats.hp = Math.min(u.stats.hp + eff.value, u.stats.maxHp);
@@ -126,7 +128,7 @@ export class TerminalScene extends Phaser.Scene {
           results.push(`+${eff.value} Consciousness`);
           break;
         case 'status':
-          if (eff.statusType) {
+          if (eff.statusType && units.length > 0) {
             const t = units[Math.floor(Math.random() * units.length)];
             StatusEffectProcessor.apply(t, { type: eff.statusType, duration: eff.duration ?? 2, potency: 1, sourceId: 'terminal' });
             results.push(`${t.name}: ${eff.statusType.replace(/_/g, ' ')}`);

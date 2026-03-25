@@ -432,6 +432,7 @@ export class BattleScene extends Phaser.Scene {
   private showResult(): void {
     const won = this.result.won;
     const cx = GAME_WIDTH / 2;
+    const mob = isMobile();
     AudioManager.setMode('none');
     if (won) AudioManager.playVictory(); else AudioManager.playDefeat();
 
